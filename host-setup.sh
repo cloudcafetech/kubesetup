@@ -112,12 +112,12 @@ systemctl restart docker
 
 fi
 
-# Installation with speceifc version
+# Installation with specefic version
 #yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
 yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
 
 # After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
-systemctl enable --now kubelet; systemctl start kubelet
+systemctl enable --now kubelet; systemctl start kubelet; systemctl status kubelet
 
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
