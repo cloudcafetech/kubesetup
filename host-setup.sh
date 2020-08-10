@@ -10,7 +10,8 @@ DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 #CRI=crio
 
-if [[ "$master" == "" || "$master" != "master" || "$master" != "node" ]]; then
+#if [[ "$master" == "" || "$master" != "master" || "$master" != "node" ]]; then
+if [[ "$master" == "" ]]; then
  echo "Usage: host-setup.sh <master or node>"
  echo "Example: host-setup.sh master/node"
  exit
@@ -133,7 +134,8 @@ systemctl enable kubelet; systemctl start kubelet
 if [[ "$master" == "node" ]]; then
   echo ""
   echo "Waiting for Master ($KUBEMASTER) API response .."
-  while [[ $(nc $KUBEMASTER 6443 &> /dev/null) != "True" ]]; do printf '.'; sleep 2; done
+  #while [[ $(nc $KUBEMASTER 6443 &> /dev/null) != "True" ]]; do printf '.'; sleep 2; done
+  while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
   exit
 fi
