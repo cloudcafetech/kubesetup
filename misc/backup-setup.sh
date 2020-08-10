@@ -14,7 +14,7 @@ cd
 cat <<EOF > credentials-velero
 [default]
 aws_access_key_id = admin
-aws_secret_access_key = admin2675
+aws_secret_access_key = bappa2675
 EOF
 
 HOST_NAME=$(hostname)
