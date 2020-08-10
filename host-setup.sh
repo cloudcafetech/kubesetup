@@ -29,15 +29,15 @@ setenforce 0
 sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
 
 # Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
-cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kube*
+exclude=kubelet kubeadm kubectl
 EOF
 
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
@@ -113,10 +113,11 @@ systemctl restart docker
 fi
 
 # Installation with speceifc version
-yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
+#yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
+yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
 
 # After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
-systemctl enable kubelet; systemctl start kubelet
+systemctl enable --now kubelet; systemctl start kubelet
 
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
