@@ -11,29 +11,24 @@ TOKEN=$DATE.1a7dd4cc8d1f4cc5
 #CRI=crio
 
 if [[ ! $master =~ ^( |master|node)$ ]]; then 
-#if [[ "$master" == "" ]]; then
  echo "Usage: host-setup.sh <master or node>"
  echo "Example: host-setup.sh master/node"
  exit
 fi
 
-#Stopping and disabling firewalld by running the commands on all servers:
-
+# Stopping and disabling firewalld by running the commands on all servers:
 systemctl stop firewalld
 systemctl disable firewalld
 
-#Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
-
+# Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
 swapoff -a
 sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
 
-#Disable SELinux
-
+# Disable SELinux
 setenforce 0
 sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
 
-#Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
-
+# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -45,15 +40,13 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cl
 exclude=kube*
 EOF
 
-#Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
-
+# Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
 yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet
 
 if [[ $CRI != "docker" ]]
 then
 
 # Setup for CRIO
-
 modprobe overlay
 modprobe br_netfilter
 
@@ -66,7 +59,6 @@ EOF
 sysctl --system
 
 # Install CRI-O prerequisites & tool
-
 cat << EOF > /etc/yum.repos.d/crio.repo
 [cri-o]
 name=CRI-O Packages for CentOS 7 — $basearch
@@ -100,11 +92,9 @@ systemctl enable crio
 else
 
 # Setup for docker
-
 yum install -y docker
 
 # Modify /etc/sysconfig/docker file as follows.
-
 more /etc/sysconfig/docker | grep OPTIONS
 sed -i "s/^OPTIONS=.*/OPTIONS='--selinux-enabled --signature-verification=false'/g" /etc/sysconfig/docker
 more /etc/sysconfig/docker | grep OPTIONS
@@ -126,22 +116,18 @@ fi
 yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
 
 # After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
-
 systemctl enable kubelet; systemctl start kubelet
 
 # Setting up Kubernetes Node using Kubeadm
-
 if [[ "$master" == "node" ]]; then
   echo ""
   echo "Waiting for Master ($KUBEMASTER) API response .."
-  #while [[ $(nc $KUBEMASTER 6443 &> /dev/null) != "True" ]]; do printf '.'; sleep 2; done
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
   exit
 fi
 
 # Setting up Kubernetes Master using Kubeadm
-
 if [[ "$master" == "master" && $CRI != "docker" ]]; then
   kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version $(kubeadm version -o short) --cri-socket "/var/run/crio/crio.sock" --ignore-preflight-errors=all 2>&1 | tee kubeadm-output.txt
 else
@@ -182,6 +168,8 @@ kubectl krew install ctx
 kubectl krew install ns
 
 echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> /root/.bash_profile
+
+kubectl get nodes
 
 # Setup Ingress
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
