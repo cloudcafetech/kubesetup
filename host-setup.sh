@@ -140,36 +140,19 @@ export KUBECONFIG=$HOME/admin.conf
 echo "export KUBECONFIG=$HOME/admin.conf" >> $HOME/.bash_profile
 echo "alias oc=/usr/bin/kubectl" >> /root/.bash_profile
 
+mkdir setup-files
+cd setup-files
+
 wget https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml
 kubectl create -f kube-flannel.yml
 
 sleep 20
-
 kubectl get nodes
 
 # Make Master scheduble
 MASTER=`kubectl get nodes | grep master | awk '{print $1}'`
 kubectl taint nodes $MASTER node-role.kubernetes.io/master-
 kubectl get nodes -o json | jq .items[].spec.taints
-
-# Install krew
-set -x; cd "$(mktemp -d)" &&
-  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
-  tar zxvf krew.tar.gz &&
-  KREW=./krew-"$(uname | tr '[:upper:]' '[:lower:]')_amd64" &&
-  "$KREW" install --manifest=krew.yaml --archive=krew.tar.gz &&
-  "$KREW" update
-  
-export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-
-# Install kubectl plugins using krew
-kubectl krew install modify-secret
-kubectl krew install ctx
-kubectl krew install ns
-
-echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> /root/.bash_profile
-
-kubectl get nodes
 
 # Setup Ingress
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
@@ -202,3 +185,19 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo
 kubectl create ns demo-mongo
 kubectl create -f mongo-employee.yaml
 
+# Install krew
+set -x; cd "$(mktemp -d)" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
+  tar zxvf krew.tar.gz &&
+  KREW=./krew-"$(uname | tr '[:upper:]' '[:lower:]')_amd64" &&
+  "$KREW" install --manifest=krew.yaml --archive=krew.tar.gz &&
+  "$KREW" update
+  
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+# Install kubectl plugins using krew
+kubectl krew install modify-secret
+kubectl krew install ctx
+kubectl krew install ns
+
+echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> /root/.bash_profile
