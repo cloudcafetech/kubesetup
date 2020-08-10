@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  labels:
+    name: mongo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    name: mongo
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    name: mongo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mongo
+  template:
+    metadata:
+      labels:
+        name: mongo
+    spec:
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+      containers:
+      - name: mongo
+        image: mongo
+        ports:
+          - containerPort: 27017
+        volumeMounts:
+          - name: mongo-storage
+            mountPath: /data/db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myemp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: myemp
+  template:
+    metadata:
+      labels:
+        name: myemp
+    spec:
+      containers:
+      - name: myemp
+        image: prasenforu/employee
+        ports:
+        - containerPort: 8888
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myemp
+  labels:
+    name: myemp
+spec:
+  ports:
+  - name: 80-tcp
+    port: 80
+    protocol: TCP
+    targetPort: 8888
+  selector:
+    name: myemp
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  labels:
+    name: myemp
+  name: myemp-ing
+spec:
+  rules:
+    - host: employee.apps.cloud-cafe.tk
+      http:
+        paths:
+          - backend:
+              serviceName: myemp
+              servicePort: 80

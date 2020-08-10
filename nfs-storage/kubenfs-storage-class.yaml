@@ -1,0 +1,7 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: kubenfs-storage
+provisioner: kubenfs
+parameters:
+  archiveOnDelete: "false"

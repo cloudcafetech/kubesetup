@@ -3,13 +3,9 @@
 
 master=$1
 KUBEMASTER=10.128.0.5
-MinIO=10.128.0.9
-NFSRV=10.128.0.9
-NFSMOUNT=/root/nfs/nfsdata
 #K8S_VER=1.14.5
 K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 CRI=docker
-velver=v1.4.2
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 #CRI=crio
@@ -19,7 +15,6 @@ if [[ "$master" == "" || "$master" != "master" || "$master" != "node" ]]; then
  echo "Example: host-setup.sh master/node"
  exit
 fi
-
 
 #Stopping and disabling firewalld by running the commands on all servers:
 
@@ -181,91 +176,39 @@ export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
 # Install kubectl plugins using krew
 kubectl krew install modify-secret
-kubectl krew install doctor
 kubectl krew install ctx
 kubectl krew install ns
 
 echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> /root/.bash_profile
 
-# Deploying Ingress
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/kube-ingress.yaml
+# Setup Ingress
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
 sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
 kubectl create ns kube-router
 kubectl create -f kube-ingress.yaml
 
 # Deploying dynamic NFS based persistant storage
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/nfs-rbac.yaml
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/nfs-deployment.yaml
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/kubenfs-storage-class.yaml
-sed -i "s/10.128.0.9/$NFSRV/g" nfs-deployment.yaml
-sed -i "s|/root/nfs/kubedata|$NFSMOUNT|g" nfs-deployment.yaml
-kubectl create ns kubenfs
-kubectl create -f nfs-rbac.yaml -f nfs-deployment.yaml -f kubenfs-storage-class.yaml -n kubenfs
-SC=`kubectl get sc | grep kubenfs | awk '{print $1}'`	
-kubectl patch sc $SC -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'	
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/nfsstorage-setup.sh
+chmod +x ./nfsstorage-setup.sh
+./nfsstorage-setup.sh
 
-# Setup Velero
-wget https://github.com/vmware-tanzu/velero/releases/download/$velver/velero-$velver-linux-amd64.tar.gz
-tar -xvzf velero-$velver-linux-amd64.tar.gz
-mv -v velero-$velver-linux-amd64/velero /usr/local/bin/velero
-echo "alias vel=/usr/local/bin/velero" >> /root/.bash_profile
-
-cd 
-cat <<EOF > credentials-velero
-[default]
-aws_access_key_id = admin
-aws_secret_access_key = bappa2675
-EOF
-
-HOST_NAME=$(hostname)
-HOST_IP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
-openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout private.key -out public.crt -subj "/CN=$HOST_IP/O=$HOST_NAME"
-
-velero install \
-    --provider aws \
-    --bucket velero-cluster1 \
-    --plugins velero/velero-plugin-for-aws:v1.1.0 \
-    --use-restic \
-    --secret-file ./credentials-velero \
-    --use-volume-snapshots=true \
-    --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://$MinIO:9000 \
-    --snapshot-location-config region=minio
+# Setup Velero Backup
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/backup-setup.sh
+chmod +x ./backup-setup.sh
+./backup-setup.sh
     
 # Setup Helm Chart
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/setup-helm.sh
-chmod +x setup-helm.sh
-./setup-helm.sh
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/helm-setup.sh
+chmod +x ./helm-setup.sh
+./helm-setup.sh
 
-# Setup for monitring and logging
-#exit
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/kubemon.yaml
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/kubelog.yaml
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/loki.yaml
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/loki-ds.json
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/pod-monitoring.json
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/kube-monitoring-overview.json
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/cluster-cost.json
+# Setup for Monitring and Logging
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/monitoring-setup.sh
+chmod +x ./monitoring-setup.sh
+./monitoring-setup.sh
 
-kubectl create ns monitoring
-kubectl create -f kubemon.yaml -n monitoring
-kubectl create ns logging
-kubectl create secret generic loki -n logging --from-file=loki.yaml
-kubectl create -f kubelog.yaml -n logging
-
-## Upload Grafana dashboard & loki datasource
-echo ""
-echo "Waiting for Grafana POD ready to upload dashboard & loki datasource .."
-while [[ $(kubectl get pods kubemon-grafana-0 -n monitoring -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do printf '.'; sleep 2; done
-
-HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
-curl -vvv http://admin:admin2675@$HIP:30000/api/dashboards/db -X POST -d @pod-monitoring.json -H 'Content-Type: application/json'
-curl -vvv http://admin:admin2675@$HIP:30000/api/dashboards/db -X POST -d @kube-monitoring-overview.json -H 'Content-Type: application/json'
-curl -vvv http://admin:admin2675@$HIP:30000/api/dashboards/db -X POST -d @cluster-cost.json -H 'Content-Type: application/json'
-curl -vvv http://admin:admin2675@$HIP:30000/api/datasources -X POST -d @loki-ds.json -H 'Content-Type: application/json' 
-
-# Setup Demo application
-#exit
-wget https://raw.githubusercontent.com/cloudcafetech/kube-katakoda/master/mongo-employee.yaml
+# Setup Demo Application
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo-employee.yaml
 kubectl create ns demo-mongo
-kubectl create -f mongo-employee.yaml -n demo-mongo
+kubectl create -f mongo-employee.yaml
 
