@@ -1,0 +1,2 @@
+# kubesetup
+Vanila Kubernetes Setup
