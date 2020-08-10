@@ -1,4 +1,4 @@
-# Kubernetes Platform
+# Setup Kubernetes Platform
 Vanila Kubernetes Platform with Monitoring, Logging & Backup
 
 https://www.katacoda.com/courses/kubernetes/getting-started-with-kubeadm
