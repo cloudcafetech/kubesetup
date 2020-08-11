@@ -1821,126 +1821,6 @@ data:
         target_label: instance
         replacement: $1
         action: replace
-    - job_name: kubelet
-      honor_labels: true
-      honor_timestamps: true
-      scrape_interval: 30s
-      scrape_timeout: 30s
-      metrics_path: /metrics
-      scheme: https
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names:
-          - kube-system
-      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      tls_config:
-        insecure_skip_verify: true
-      relabel_configs:
-      - source_labels: [__meta_kubernetes_service_label_k8s_app]
-        separator: ;
-        regex: kubelet
-        replacement: $1
-        action: keep
-      - source_labels: [__meta_kubernetes_endpoint_port_name]
-        separator: ;
-        regex: https-metrics
-        replacement: $1
-        action: keep
-      - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
-        separator: ;
-        regex: Node;(.*)
-        target_label: node
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
-        separator: ;
-        regex: Pod;(.*)
-        target_label: pod
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_namespace]
-        separator: ;
-        regex: (.*)
-        target_label: namespace
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_service_name]
-        separator: ;
-        regex: (.*)
-        target_label: service
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_pod_name]
-        separator: ;
-        regex: (.*)
-        target_label: pod
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_service_name]
-        separator: ;
-        regex: (.*)
-        target_label: job
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_service_label_k8s_app]
-        separator: ;
-        regex: (.+)
-        target_label: job
-        replacement: ${1}
-        action: replace
-      - separator: ;
-        regex: (.*)
-        target_label: endpoint
-        replacement: https-metrics
-        action: replace
-      - source_labels: [__metrics_path__]
-        separator: ;
-        regex: (.*)
-        target_label: metrics_path
-        replacement: $1
-        action: replace
-      metric_relabel_configs:
-      - source_labels: [__name__]
-        separator: ;
-        regex: kubelet_(pod_worker_latency_microseconds|pod_start_latency_microseconds|cgroup_manager_latency_microseconds|pod_worker_start_latency_microseconds|pleg_relist_latency_microseconds|pleg_relist_interval_microseconds|runtime_operations|runtime_operations_latency_microseconds|runtime_operations_errors|eviction_stats_age_microseconds|device_plugin_registration_count|device_plugin_alloc_latency_microseconds|network_plugin_operations_latency_microseconds)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: scheduler_(e2e_scheduling_latency_microseconds|scheduling_algorithm_predicate_evaluation|scheduling_algorithm_priority_evaluation|scheduling_algorithm_preemption_evaluation|scheduling_algorithm_latency_microseconds|binding_latency_microseconds|scheduling_latency_seconds)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: apiserver_(request_count|request_latencies|request_latencies_summary|dropped_requests|storage_data_key_generation_latencies_microseconds|storage_transformation_failures_total|storage_transformation_latencies_microseconds|proxy_tunnel_sync_latency_secs)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: kubelet_docker_(operations|operations_latency_microseconds|operations_errors|operations_timeout)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: reflector_(items_per_list|items_per_watch|list_duration_seconds|lists_total|short_watches_total|watch_duration_seconds|watches_total)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: etcd_(helper_cache_hit_count|helper_cache_miss_count|helper_cache_entry_count|request_cache_get_latencies_summary|request_cache_add_latencies_summary|request_latencies_summary)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: transformation_(transformation_latencies_microseconds|failures_total)
-        replacement: $1
-        action: drop
-      - source_labels: [__name__]
-        separator: ;
-        regex: (admission_quota_controller_adds|crd_autoregistration_controller_work_duration|APIServiceOpenAPIAggregationControllerQueue1_adds|AvailableConditionController_retries|crd_openapi_controller_unfinished_work_seconds|APIServiceRegistrationController_retries|admission_quota_controller_longest_running_processor_microseconds|crdEstablishing_longest_running_processor_microseconds|crdEstablishing_unfinished_work_seconds|crd_openapi_controller_adds|crd_autoregistration_controller_retries|crd_finalizer_queue_latency|AvailableConditionController_work_duration|non_structural_schema_condition_controller_depth|crd_autoregistration_controller_unfinished_work_seconds|AvailableConditionController_adds|DiscoveryController_longest_running_processor_microseconds|autoregister_queue_latency|crd_autoregistration_controller_adds|non_structural_schema_condition_controller_work_duration|APIServiceRegistrationController_adds|crd_finalizer_work_duration|crd_naming_condition_controller_unfinished_work_seconds|crd_openapi_controller_longest_running_processor_microseconds|DiscoveryController_adds|crd_autoregistration_controller_longest_running_processor_microseconds|autoregister_unfinished_work_seconds|crd_naming_condition_controller_queue_latency|crd_naming_condition_controller_retries|non_structural_schema_condition_controller_queue_latency|crd_naming_condition_controller_depth|AvailableConditionController_longest_running_processor_microseconds|crdEstablishing_depth|crd_finalizer_longest_running_processor_microseconds|crd_naming_condition_controller_adds|APIServiceOpenAPIAggregationControllerQueue1_longest_running_processor_microseconds|DiscoveryController_queue_latency|DiscoveryController_unfinished_work_seconds|crd_openapi_controller_depth|APIServiceOpenAPIAggregationControllerQueue1_queue_latency|APIServiceOpenAPIAggregationControllerQueue1_unfinished_work_seconds|DiscoveryController_work_duration|autoregister_adds|crd_autoregistration_controller_queue_latency|crd_finalizer_retries|AvailableConditionController_unfinished_work_seconds|autoregister_longest_running_processor_microseconds|non_structural_schema_condition_controller_unfinished_work_seconds|APIServiceOpenAPIAggregationControllerQueue1_depth|AvailableConditionController_depth|DiscoveryController_retries|admission_quota_controller_depth|crdEstablishing_adds|APIServiceOpenAPIAggregationControllerQueue1_retries|crdEstablishing_queue_latency|non_structural_schema_condition_controller_longest_running_processor_microseconds|autoregister_work_duration|crd_openapi_controller_retries|APIServiceRegistrationController_work_duration|crdEstablishing_work_duration|crd_finalizer_adds|crd_finalizer_depth|crd_openapi_controller_queue_latency|APIServiceOpenAPIAggregationControllerQueue1_work_duration|APIServiceRegistrationController_queue_latency|crd_autoregistration_controller_depth|AvailableConditionController_queue_latency|admission_quota_controller_queue_latency|crd_naming_condition_controller_work_duration|crd_openapi_controller_work_duration|DiscoveryController_depth|crd_naming_condition_controller_longest_running_processor_microseconds|APIServiceRegistrationController_depth|APIServiceRegistrationController_longest_running_processor_microseconds|crd_finalizer_unfinished_work_seconds|crdEstablishing_retries|admission_quota_controller_unfinished_work_seconds|non_structural_schema_condition_controller_adds|APIServiceRegistrationController_unfinished_work_seconds|admission_quota_controller_work_duration|autoregister_depth|autoregister_retries|kubeproxy_sync_proxy_rules_latency_microseconds|rest_client_request_latency_seconds|non_structural_schema_condition_controller_retries)
-        replacement: $1
-        action: drop
     - job_name: cadvisor
       honor_labels: true
       honor_timestamps: true
@@ -1949,83 +1829,33 @@ data:
       metrics_path: /metrics/cadvisor
       scheme: https
       kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names:
-          - kube-system
+      - role: node
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         insecure_skip_verify: true
       relabel_configs:
-      - source_labels: [__meta_kubernetes_service_label_k8s_app]
-        separator: ;
-        regex: kubelet
-        replacement: $1
-        action: keep
-      - source_labels: [__meta_kubernetes_endpoint_port_name]
-        separator: ;
-        regex: https-metrics
-        replacement: $1
-        action: keep
-      - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
-        separator: ;
-        regex: Node;(.*)
-        target_label: node
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
-        separator: ;
-        regex: Pod;(.*)
-        target_label: pod
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_namespace]
-        separator: ;
-        regex: (.*)
-        target_label: namespace
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_service_name]
-        separator: ;
-        regex: (.*)
-        target_label: service
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_pod_name]
-        separator: ;
-        regex: (.*)
-        target_label: pod
-        replacement: $1
-        action: replace
-      - source_labels: [__meta_kubernetes_service_name]
-        separator: ;
-        regex: (.*)
-        target_label: job
-        replacement: ${1}
-        action: replace
-      - source_labels: [__meta_kubernetes_service_label_k8s_app]
-        separator: ;
-        regex: (.+)
-        target_label: job
-        replacement: ${1}
-        action: replace
-      - separator: ;
-        regex: (.*)
-        target_label: endpoint
-        replacement: https-metrics
-        action: replace
-      - source_labels: [__metrics_path__]
-        separator: ;
-        regex: (.*)
-        target_label: metrics_path
-        replacement: $1
-        action: replace
-      metric_relabel_configs:
-      - source_labels: [__name__]
-        separator: ;
-        regex: container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)
-        replacement: $1
-        action: drop
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+    - job_name: kubelet
+      honor_labels: true
+      honor_timestamps: true
+      scrape_interval: 30s
+      scrape_timeout: 30s
+      metrics_path: /metrics
+      scheme: https
+      kubernetes_sd_configs:
+      - role: node
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+    - job_name: 'ingress-nginx'
+      static_configs:
+      - targets: ['ingress-nginx.kube-router.svc.cluster.local:10254']
 ---
 kind: Service
 apiVersion: v1
