@@ -167,7 +167,7 @@
       "tableColumn": "{job=\"kubelet\"}",
       "targets": [
         {
-          "expr": "avg(up{job=\"kubelet\",metrics_path=\"/metrics\"}) BY (job)",
+          "expr": "avg(up{job=\"kubelet\"}) BY (job)",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -1062,7 +1062,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(up{job=\"kubelet\",metrics_path=\"/metrics\"}) BY (job)",
+          "expr": "avg(up{job=\"kubelet\"}) BY (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1122,6 +1122,7 @@
     },
     {
       "alert": {
+        "alertRuleTags": {},
         "conditions": [
           {
             "evaluator": {
@@ -1148,6 +1149,7 @@
           }
         ],
         "executionErrorState": "alerting",
+        "for": "0m",
         "frequency": "60s",
         "handler": 1,
         "name": "CPU Temperature alert",
@@ -1860,7 +1862,8 @@
   "style": "dark",
   "tags": [
     "custom",
-    "overview"
+    "overview",
+    "Kubernetes"
   ],
   "templating": {
     "list": []
