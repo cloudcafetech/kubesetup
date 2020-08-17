@@ -179,7 +179,7 @@ chmod +x ./monitoring-setup.sh
 # Setup Demo Application
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo-employee.yaml
 kubectl create ns demo-mongo
-kubectl create -f mongo-employee.yaml
+kubectl create -f mongo-employee.yaml -n demo-mongo
 
 # Install krew
 set -x; cd "$(mktemp -d)" &&
