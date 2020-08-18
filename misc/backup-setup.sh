@@ -14,12 +14,10 @@ cd
 cat <<EOF > credentials-velero
 [default]
 aws_access_key_id = admin
-aws_secret_access_key = bappa2675
+aws_secret_access_key = admin2675
 EOF
 
-HOST_NAME=$(hostname)
-HOST_IP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
-openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout private.key -out public.crt -subj "/CN=$HOST_IP/O=$HOST_NAME"
+cp /home/centos/rootCA.pem $HOME/
 
 velero install \
     --provider aws \
@@ -28,8 +26,12 @@ velero install \
     --use-restic \
     --secret-file ./credentials-velero \
     --use-volume-snapshots=true \
-    --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://$MinIO:9000 \
+    --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=https://$MinIO,insecureSkipTLSVerify="true" \
+    --cacert rootCA.pem \
     --snapshot-location-config region=minio
+    
+wget https://raw.githubusercontent.com/cloudcafetech/velero-backup-restore/master/velero-volume-controller.yaml    
+kubectl create -f velero-volume-controller.yaml    
 
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/backup/backup.sh
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/backup/restore.sh
