@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Kubernetes host setup script for CentOS
 
 master=$1
