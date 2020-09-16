@@ -2,7 +2,7 @@
 # Kubernetes host setup script for CentOS
 
 master=$1
-KUBEMASTER=10.128.0.5
+#KUBEMASTER=10.128.0.5
 #K8S_VER=1.14.5
 K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 CRI=docker
