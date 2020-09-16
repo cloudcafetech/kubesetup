@@ -9,7 +9,9 @@ OS ```CentOS 7``` to be ready before hand to start kubernetes deployment using k
 ### Setup Kubernetes
 
 On Master host run following command
+
 ```curl -s https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/host-setup.sh | KUBEMASTER=<MASTER-IP> bash -s master```
 
 On Node host run following command
+
 ```curl -s https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/host-setup.sh | KUBEMASTER=<MASTER-IP> bash -s node```
