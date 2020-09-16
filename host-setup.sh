@@ -41,7 +41,7 @@ exclude=kubelet kubeadm kubectl
 EOF
 
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
-yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet
+yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix
 
 if [[ $CRI != "docker" ]]
 then
