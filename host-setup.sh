@@ -4,11 +4,9 @@
 master=$1
 #KUBEMASTER=10.128.0.5
 #K8S_VER=1.14.5
-K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
-CRI=docker
+#K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
-#CRI=crio
 
 if [[ ! $master =~ ^( |master|node)$ ]]; then 
  echo "Usage: host-setup.sh <master or node>"
@@ -43,54 +41,6 @@ EOF
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
 yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix
 
-if [[ $CRI != "docker" ]]
-then
-
-# Setup for CRIO
-modprobe overlay
-modprobe br_netfilter
-
-cat > /etc/sysctl.d/99-kubernetes-cri.conf <<EOF
-net.bridge.bridge-nf-call-iptables  = 1
-net.ipv4.ip_forward                 = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-EOF
-
-sysctl --system
-
-# Install CRI-O prerequisites & tool
-cat << EOF > /etc/yum.repos.d/crio.repo
-[cri-o]
-name=CRI-O Packages for CentOS 7 — $basearch
-baseurl=http://mirror.centos.org/centos/7/paas/x86_64/openshift-origin311/
-enabled=1
-gpgcheck=0
-EOF
-
-# Install CRI-O
-yum -y install cri-o cri-tools
-
-# Modify CRI-O config in cgroup_manager = "systemd" to "cgroupfs"
-sed -i 's/cgroup_manager = "systemd"/cgroup_manager = "cgroupfs"/g' /etc/crio/crio.conf
-
-# Modify CRI-O config for disabling selinux
-sed -i 's/selinux = true/selinux = false/g' /etc/crio/crio.conf
-
-# upgrade crio version due to POD hostNetwork loopback (127.0.0.1) ip address
-yum install -y https://cbs.centos.org/kojifiles/packages/cri-o/1.13.9/1.el7/x86_64/cri-o-1.13.9-1.el7.x86_64.rpm
-
-# To escape error "failed: no ...directory"
-mkdir -p /usr/share/containers/oci/hooks.d
-
-# Remove CRI-o default CNI configuration
-rm -rf /etc/cni/net.d/*
-
-# Start CRI-O
-systemctl start crio
-systemctl enable crio
-
-else
-
 # Setup for docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
@@ -105,11 +55,14 @@ EOF
 sysctl --system
 systemctl restart docker
 
-fi
-
 # Installation with specefic version
 #yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
-yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
+if [[ "$K8S_VER" == "" ]]; then
+ yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+else
+ yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
+fi
+
 
 # After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
 systemctl enable --now kubelet; systemctl start kubelet; systemctl status kubelet
@@ -124,11 +77,7 @@ if [[ "$master" == "node" ]]; then
 fi
 
 # Setting up Kubernetes Master using Kubeadm
-if [[ "$master" == "master" && $CRI != "docker" ]]; then
-  kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version $(kubeadm version -o short) --cri-socket "/var/run/crio/crio.sock" --ignore-preflight-errors=all 2>&1 | tee kubeadm-output.txt
-else
-  kubeadm init --token=$TOKEN --pod-network-cidr=10.244.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | grep -Ei "kubeadm join|discovery-token-ca-cert-hash" 2>&1 | tee kubeadm-output.txt
-fi
+kubeadm init --token=$TOKEN --pod-network-cidr=10.244.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | grep -Ei "kubeadm join|discovery-token-ca-cert-hash" 2>&1 | tee kubeadm-output.txt
 
 sudo cp /etc/kubernetes/admin.conf $HOME/
 sudo chown $(id -u):$(id -g) $HOME/admin.conf
@@ -156,16 +105,6 @@ sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
 kubectl create ns kube-router
 kubectl create -f kube-ingress.yaml
 
-# Deploying dynamic NFS based persistant storage
-wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/nfsstorage-setup.sh
-chmod +x ./nfsstorage-setup.sh
-./nfsstorage-setup.sh
-
-# Setup Velero Backup
-wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/backup-setup.sh
-chmod +x ./backup-setup.sh
-./backup-setup.sh
-    
 # Setup Helm Chart
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/helm-setup.sh
 chmod +x ./helm-setup.sh
@@ -176,10 +115,20 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/monit
 chmod +x ./monitoring-setup.sh
 ./monitoring-setup.sh
 
+# Deploying dynamic NFS based persistant storage
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/nfsstorage-setup.sh
+chmod +x ./nfsstorage-setup.sh
+#./nfsstorage-setup.sh
+
+# Setup Velero Backup
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/backup-setup.sh
+chmod +x ./backup-setup.sh
+#./backup-setup.sh
+    
 # Setup Demo Application
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo-employee.yaml
-kubectl create ns demo-mongo
-kubectl create -f mongo-employee.yaml -n demo-mongo
+#kubectl create ns demo-mongo
+#kubectl create -f mongo-employee.yaml -n demo-mongo
 
 # Install krew
 set -x; cd "$(mktemp -d)" &&
