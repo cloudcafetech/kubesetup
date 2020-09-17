@@ -1,6 +1,5 @@
 #!/bin/bash
 # Monitoring & logging setup script for Kubernetes
-
 # Setup for monitring and logging
 
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/logging/kubelog.yaml
