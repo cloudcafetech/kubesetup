@@ -228,42 +228,39 @@ metadata:
   labels:
     app.kubernetes.io/name: kubemon
 data:
-  datasources.yml: |
+  # A file that specifies data sources for Grafana to use to populate dashboards.
+  # To learn more about configuring this, consult https://grafana.com/docs/administration/provisioning/#datasources
+  datasources.yaml: |
     apiVersion: 1
     datasources:
-      - access: proxy
-        basicAuth: false
-        editable: false
-        isDefault: false
-        jsonData:
-            derivedFields:
-              - datasourceUid: jaeger
-                matcherRegex: (?:traceID|trace_id)=(\w+)
-                name: TraceID
-                url: $${__value.raw}
-            maxLines: 1000
-        name: Loki
-        type: loki
-        url: http://loki.logging.svc.cluster.local:3100
-        version: 1
-      - access: browser
-        basicAuth: false
-        editable: false
-        isDefault: false
-        name: Jaeger
-        type: jaeger
-        uid: jaeger
-        url: http://jaeger.tracing.svc.cluster.local:16686
-        version: 1
-      - access: proxy
-        editable: false
-        isDefault: true
-        jsonData:
-            httpMethod: GET
-        name: prometheus
-        type: prometheus
-        url: http://kubemon-prometheus.monitoring.svc.cluster.local:9090
-        version: 1
+    - access: proxy
+      isDefault: true
+      name: prometheus
+      type: prometheus
+      url: http://kubemon-prometheus:9090
+      version: 1
+
+    - access: browser
+      editable: false
+      isDefault: false
+      name: Jaeger
+      type: jaeger
+      uid: jaeger
+      url: http://simplest-query.tracing:16686
+
+    - access: proxy
+      editable: false
+      isDefault: false
+      jsonData:
+          maxLines: 1000
+          derivedFields:
+            - datasourceUid: jaeger
+              matcherRegex: (?:traceID|trace_id)=(\w+)
+              name: TraceID
+              url: $${__value.raw}
+      name: Loki
+      type: loki
+      url: http://loki.logging:3100
 ---
 apiVersion: v1
 kind: ConfigMap
