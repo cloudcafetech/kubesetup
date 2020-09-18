@@ -231,6 +231,8 @@ data:
   # A file that specifies data sources for Grafana to use to populate dashboards.
   # To learn more about configuring this, consult https://grafana.com/docs/administration/provisioning/#datasources
   datasources.yaml: |
+    apiVersion: 1
+    datasources:  
     - access: browser
       editable: false
       isDefault: false
