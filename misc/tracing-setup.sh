@@ -15,3 +15,9 @@ sed -i "s/observability/tracing/g" cluster_role_binding.yaml
 
 kubectl create -f jaegertracing.io_jaegers_crd.yaml -f service_account.yaml -f role.yaml -f role_binding.yaml -f operator.yaml -n tracing
 
+kubectl apply -n tracing -f - <<EOF
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: simplest
+EOF
