@@ -131,6 +131,11 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo
 #kubectl create ns demo-mongo
 #kubectl create -f mongo-employee.yaml -n demo-mongo
 
+# Setup Tracing Backup
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/tracing-setup.sh
+chmod +x ./tracing-setup.sh
+#./backup-setup.sh
+
 # Install krew
 set -x; cd "$(mktemp -d)" &&
   curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
