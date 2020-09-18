@@ -1,0 +1,87 @@
+docker build -t prasenforu/tracingapp-frontend:v2 ./frontend
+docker push prasenforu/tracingapp-frontend:v2
+
+docker build -t prasenforu/tracingapp-backend:v2 ./backend
+docker push prasenforu/tracingapp-backend:v2
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracingapp-frontend
+  labels:
+    name: tracingapp-frontend
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tracingapp-frontend
+  template:
+    metadata:
+      labels:
+        app: tracingapp-frontend
+    spec:
+      containers:
+        - name: tracingapp-frontend
+          image: prasenforu/tracingapp-frontend:v2
+          imagePullPolicy: Always
+          env:
+            - name: COUNTER_ENDPOINT
+              value: "http://tracingapp-backend.default.svc.cluster.local:5000"
+          ports:
+            - name: frontend-port
+              containerPort: 8000
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: tracingapp-frontend
+spec:
+    type: NodePort
+    selector:
+        app: tracingapp-frontend
+    ports:
+        - protocol: TCP
+          port: 8000
+          targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracingapp-backend
+  labels:
+    name: tracingapp-backend
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tracingapp-backend
+  template:
+    metadata:
+      labels:
+        app: tracingapp-backend
+    spec:
+      containers:
+        - name: tracingapp-backend
+          image: prasenforu/tracingapp-backend:v2
+          imagePullPolicy: Always
+          ports:
+            - name: backend-port
+              containerPort: 5000
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: tracingapp-backend
+spec:
+    selector:
+        app: tracingapp-backend
+    ports:
+        - protocol: TCP
+          port: 5000
+          targetPort: 5000
