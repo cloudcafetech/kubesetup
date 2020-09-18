@@ -234,26 +234,29 @@ data:
     - name: prometheus
       type: prometheus
       access: proxy    
-      isDefault: true      
-      url: http://kubemon-prometheus:9090
+      isDefault: true
+      editable: true      
+      url: http://kubemon-prometheus.monitoring.svc.cluster.local:9090
       version: 1
+      
     - name: Loki
       type: loki
       access: proxy
-      url: http://loki.logging:3100
+      url: http://loki.logging.svc.cluster.local:3100
       basicAuth: false
-      editable: false
+      editable: true
       jsonData:
         derivedFields:
-          - datasourceName: Jaeger
+          - datasourceUid: my_jaeger_uid
             matcherRegex: "(?:traceID|trace_id)=(\\w+)"
             name: TraceID
-            url: "http://simplest-query.tracing:16686/trace/${__value.raw}"
+            url: "$${__value.raw}"
+            
     - name: Jaeger
       type: jaeger
       access: browser
-      url: http://simplest-query.tracing:16686
-      editable: false      
+      url: http://simplest-query.tracing.svc.cluster.local:16686
+      editable: true     
 ---
 apiVersion: v1
 kind: ConfigMap
