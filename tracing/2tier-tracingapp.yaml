@@ -1,9 +1,3 @@
-docker build -t prasenforu/tracingapp-frontend:v2 ./frontend
-docker push prasenforu/tracingapp-frontend:v2
-
-docker build -t prasenforu/tracingapp-backend:v2 ./backend
-docker push prasenforu/tracingapp-backend:v2
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
