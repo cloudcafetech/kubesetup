@@ -246,13 +246,13 @@ data:
       jsonData:
         derivedFields:
           - datasourceName: Jaeger
-            matcherRegex: "traceID=(\\w+)"
+            matcherRegex: "(?:traceID|trace_id)=(\\w+)"
             name: TraceID
-            url: "http://localhost:16686/trace/${__value.raw}"
+            url: "http://simplest-query.tracing:16686/trace/${__value.raw}"
     - name: Jaeger
       type: jaeger
       access: browser
-      url: http://localhost:16686
+      url: http://simplest-query.tracing:16686
       editable: false      
 ---
 apiVersion: v1
