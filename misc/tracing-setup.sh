@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install Jaeger distributed tracing in Kubernetes
 
-JAEGER_VER=v1.19.0
+#JAEGER_VER=v1.19.0
 mkdir tracing
 cd tracing
 
