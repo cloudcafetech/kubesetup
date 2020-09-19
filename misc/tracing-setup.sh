@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install tracing in Kubernetes
+# Install Jaeger distributed tracing in Kubernetes
 
 kubectl create namespace tracing
 
