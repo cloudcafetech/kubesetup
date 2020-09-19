@@ -17,14 +17,12 @@ istioctl version
 - Switch to istio installation dir and install istio into the cluster.
 
 ```
-helm template install/kubernetes/helm/istio \
-  --set global.mtls.enabled=false \
-  --set tracing.enabled=true \
-  --set kiali.enabled=true \
-  --set grafana.enabled=true \
-  --namespace istio-system > istio.yaml
-
-kubectl apply -f istio.yaml
+istioctl install \
+  --set values.tracing.enabled=true \
+  --set values.kiali.enabled=true \
+  --set values.prometheus.enabled=false \
+  --set values.grafana.enabled=false \
+  --namespace istio-system 
 
 # Wait until pods are in Running or Completed state
 kubectl get pods -n istio-system
