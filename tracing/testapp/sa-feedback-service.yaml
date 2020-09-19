@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sa-feedback
+  labels:
+    app: sa-feedback
+spec:
+  selector:
+    matchLabels:
+      app: sa-feedback
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: sa-feedback
+        version: v1
+    spec:
+      containers:
+      - image: rinormaloku/sentiment-analysis-feedback:istio-tracing
+        imagePullPolicy: Always
+        name: sa-feedback
+        env:
+        - name: DATABASE_DIR
+          value: /usr/db
+        - name: JAEGER_SERVICE_NAME
+          value: sa-feedback
+        - name: JAEGER_AGENT_HOST
+          value: jaeger-agent.istio-system.svc.cluster.local
+        - name: JAEGER_REPORTER_LOG_SPANS
+          value: "true"
+        - name: JAEGER_SAMPLER_TYPE
+          value: "const"
+        - name: JAEGER_SAMPLER_PARAM
+          value: "1"
+        ports:
+          - containerPort: 80
+        volumeMounts:
+        - name: sqlite-volume
+          mountPath: /usr/db
+      volumes:
+      - name: sqlite-volume
+        persistentVolumeClaim:
+          claimName: sqlite-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sa-feedback
+  labels:
+    app: sa-feedback
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: sa-feedback

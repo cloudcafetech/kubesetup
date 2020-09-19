@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sa-frontend
+  labels:
+    app: sa-frontend
+spec:
+  selector:
+    matchLabels:
+      app:  sa-frontend
+  replicas: 1
+  minReadySeconds: 15
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: 
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: sa-frontend
+        version: white
+    spec:
+      containers:
+        - image: rinormaloku/sentiment-analysis-frontend:istio
+          imagePullPolicy: Always
+          name: sa-frontend
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sa-frontend
+  labels:
+    app: sa-frontend
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: sa-frontend
