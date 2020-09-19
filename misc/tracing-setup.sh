@@ -26,7 +26,8 @@ sed -i 's/Deployment/StatefulSet/g' operator.yaml; awk '1;/replicas/{ print "  s
 
 sed -i "s/observability/tracing/g" cluster_role_binding.yaml
 
-kubectl create -f jaegertracing.io_jaegers_crd.yaml -f service_account.yaml -f role.yaml -f role_binding.yaml -f operator.yaml -n tracing
+#kubectl create -f jaegertracing.io_jaegers_crd.yaml -f service_account.yaml -f role.yaml -f role_binding.yaml -f operator.yaml -n tracing
+kubectl create -f . -n tracing
 
 echo "Waiting for Jaeger POD ready .."
 while [[ $(kubectl get pods jaeger-operator-0 -n tracing -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do printf '.'; sleep 2; done
