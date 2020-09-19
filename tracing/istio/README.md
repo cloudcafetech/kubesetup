@@ -37,4 +37,4 @@ kubectl get namespace -L istio-injection
 
 - Set up the application
 
-```kubectl apply -f ./resource-manifests/kube```
+```kubectl apply -f ../istio/tracing/testapp```
