@@ -1,6 +1,9 @@
 #!/bin/bash
 # Install Jaeger distributed tracing in Kubernetes
 
+mkdir tracing
+cd tracing
+
 kubectl create namespace tracing
 
 wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
