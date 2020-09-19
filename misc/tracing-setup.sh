@@ -1,18 +1,25 @@
 #!/bin/bash
 # Install Jaeger distributed tracing in Kubernetes
 
+JAEGER_VER=v1.19.0
 mkdir tracing
 cd tracing
 
+if [[ "$JAEGER_VER" == "" ]]; then
+ DOWNLOAD=master
+else
+ DOWNLOAD=$JAEGER_VER
+fi
+
 kubectl create namespace tracing
 
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/service_account.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role_binding.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/operator.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role.yaml
-wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role_binding.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/crds/jaegertracing.io_jaegers_crd.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/service_account.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/role.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/role_binding.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/operator.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/cluster_role.yaml
+wget https://raw.githubusercontent.com/jaegertracing/jaeger-operator/$DOWNLOAD/deploy/cluster_role_binding.yaml
 
 sed -i '0,/fieldP/{//d;}' operator.yaml; sed -i '0,/fieldR/{//d;}' operator.yaml; sed -i '0,/valueFrom:/{s/valueFrom:/value: ""/}' operator.yaml
 sed -i "s/observability/tracing/g" cluster_role_binding.yaml
