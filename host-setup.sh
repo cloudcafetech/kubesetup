@@ -101,7 +101,7 @@ kubectl taint nodes $MASTER node-role.kubernetes.io/master-
 kubectl get nodes -o json | jq .items[].spec.taints
 
 # Setup Metric Server
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring/metric-server.yaml
 
 # Setup Ingress
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
