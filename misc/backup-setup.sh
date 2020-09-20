@@ -5,12 +5,14 @@
 MinIO=10.128.0.9
 velver=v1.4.2
 
+mkdir backup
+cd backup
+
 wget https://github.com/vmware-tanzu/velero/releases/download/$velver/velero-$velver-linux-amd64.tar.gz
 tar -xvzf velero-$velver-linux-amd64.tar.gz
 mv -v velero-$velver-linux-amd64/velero /usr/local/bin/velero
 echo "alias vel=/usr/local/bin/velero" >> /root/.bash_profile
 
-cd 
 cat <<EOF > credentials-velero
 [default]
 aws_access_key_id = admin
