@@ -1037,12 +1037,17 @@
       "targets": [
         {
           "expr": "{instance=\"$PoD\"} ",
+          "hide": true,         
           "refId": "A"
         },
         {
           "expr": "{instance=\"$PoD\"} |~ \"(error)\"",
           "hide": true,
           "refId": "B"
+        },
+        {
+          "expr": "{pod=\"$PoD\"} |~ \"(?:traceID|trace_id|TraceId)\"",
+          "refId": "C"
         }
       ],
       "timeFrom": null,
