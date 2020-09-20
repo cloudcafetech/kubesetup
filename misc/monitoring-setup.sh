@@ -1,6 +1,9 @@
 #!/bin/bash
 # Install monitoring and logging in Kubernetes
 
+mkdir monitoring
+cd monitoring
+
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/logging/kubelog.yaml
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/logging/loki.yaml
 #wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/logging/loki-ds.json
@@ -15,6 +18,10 @@ kubectl create -f kubemon.yaml -n monitoring
 kubectl create ns logging
 kubectl create secret generic loki -n logging --from-file=loki.yaml
 kubectl create -f kubelog.yaml -n logging
+
+# Below comments (two lines) if setup with Fluentbit
+kubectl delete ds loki-fluent-bit-loki -n logging
+kubectl create -f promtail.yaml -n logging
 
 ## Upload Grafana dashboard & loki datasource
 echo ""
