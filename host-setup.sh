@@ -100,6 +100,9 @@ MASTER=`kubectl get nodes | grep master | awk '{print $1}'`
 kubectl taint nodes $MASTER node-role.kubernetes.io/master-
 kubectl get nodes -o json | jq .items[].spec.taints
 
+# Setup Metric Server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+
 # Setup Ingress
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
 sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
