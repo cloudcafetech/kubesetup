@@ -220,6 +220,8 @@ data:
     data = /var/lib/grafana/data
     logs = /var/log/grafana
     plugins = /var/lib/grafana/plugins
+    [users]
+    default_theme = light    
 ---
 apiVersion: v1
 kind: ConfigMap
