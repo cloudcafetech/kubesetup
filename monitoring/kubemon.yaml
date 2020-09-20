@@ -247,15 +247,12 @@ data:
           maxLines: 1000
           derivedFields:
             - datasourceUid: jaeger
-              matcherRegex: (?:traceID|trace_id)=(\w+)
+              matcherRegex: "(?:traceID|trace_id|TraceId)=(\\w+)"
               name: TraceID
-              url: $${__value.raw}
+              url: "$${__value.raw}"
       name: Loki
       type: loki
       url: http://loki.logging:3100
-  prometheus.yml: |
-    apiVersion: 1
-    datasources:
     - access: proxy
       isDefault: true
       name: prometheus
