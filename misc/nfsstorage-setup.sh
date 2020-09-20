@@ -6,6 +6,9 @@
 NFSRV=10.128.0.9
 NFSMOUNT=/root/nfs/nfsdata
 
+mkdir nfsstorage
+cd nfsstorage
+
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/nfs-storage/nfs-rbac.yaml
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/nfs-storage/nfs-deployment.yaml
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/nfs-storage/kubenfs-storage-class.yaml
