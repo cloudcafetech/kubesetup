@@ -8,6 +8,7 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring/pod-monitoring.json
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring/kube-monitoring-overview.json
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring/cluster-cost.json
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/logging/promtail.yaml
 
 kubectl create ns monitoring
 kubectl create -f kubemon.yaml -n monitoring
