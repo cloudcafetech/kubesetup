@@ -114,7 +114,7 @@ chmod +x ./helm-setup.sh
 # Setup for Monitring and Logging
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/monitoring-setup.sh
 chmod +x ./monitoring-setup.sh
-./monitoring-setup.sh
+#./monitoring-setup.sh
 
 # Deploying dynamic NFS based persistant storage
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/nfsstorage-setup.sh
@@ -134,7 +134,7 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo
 # Setup Tracing Backup
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/tracing-setup.sh
 chmod +x ./tracing-setup.sh
-#./backup-setup.sh
+#./tracing-setup.sh
 
 # Install krew
 set -x; cd "$(mktemp -d)" &&
@@ -152,3 +152,5 @@ kubectl krew install ctx
 kubectl krew install ns
 
 echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> /root/.bash_profile
+
+Kubectl get nodes
