@@ -1047,8 +1047,13 @@
         },
         {
           "expr": "{pod=\"$PoD\"} |~ \"(?:traceID|trace_id|TraceId)\"",
+          "hide": true,         
           "refId": "C"
-        }
+        },
+        {
+          "expr": "{pod=\"$PoD\"} ",
+          "refId": "D"
+        }       
       ],
       "timeFrom": null,
       "timeShift": null,
