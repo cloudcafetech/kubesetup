@@ -131,6 +131,7 @@ chmod +x ./backup-setup.sh
     
 # Setup Demo Application
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/demo/mongo-employee.yaml
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/tracing/hotrod-app.yaml
 #kubectl create ns demo-mongo
 #kubectl create -f mongo-employee.yaml -n demo-mongo
 
