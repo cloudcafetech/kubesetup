@@ -4,6 +4,8 @@ metadata:
   name: sa-frontend
   labels:
     app: sa-frontend
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"     
 spec:
   selector:
     matchLabels:
