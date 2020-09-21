@@ -4,6 +4,8 @@ metadata:
   name: sa-feedback
   labels:
     app: sa-feedback
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"    
 spec:
   selector:
     matchLabels:
@@ -26,7 +28,7 @@ spec:
         - name: JAEGER_SERVICE_NAME
           value: sa-feedback
         - name: JAEGER_AGENT_HOST
-          value: jaeger-agent.istio-system.svc.cluster.local
+          value: simplest-agent.tracing.svc.cluster.local
         - name: JAEGER_REPORTER_LOG_SPANS
           value: "true"
         - name: JAEGER_SAMPLER_TYPE
