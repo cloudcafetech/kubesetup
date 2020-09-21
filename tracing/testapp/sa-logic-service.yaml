@@ -4,6 +4,8 @@ metadata:
   name: sa-logic
   labels:
     app: sa-logic
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"     
 spec:
   selector:
     matchLabels:
