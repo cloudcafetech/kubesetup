@@ -249,7 +249,7 @@ data:
           maxLines: 1000
           derivedFields:
             - datasourceUid: jaeger
-              matcherRegex: "(?:traceID|trace_id|TraceId)=(\\w+)"
+              matcherRegex: '"(?:traceID|trace_id|TraceId)": "(\w+)"'
               name: TraceID
               url: "$${__value.raw}"
       name: Loki
