@@ -1,0 +1,184 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eshop
+  labels:
+    app: eshop
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: eshop
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  labels:
+    app: inventory
+spec:
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: inventory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing
+  labels:
+    app: billing
+spec:
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: billing
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delivery
+  labels:
+    app: delivery
+spec:
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: delivery
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eshop-v1
+  labels:
+    version: v1
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eshop
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: eshop
+        version: v1
+    spec:
+      containers:
+      - name: eshop
+        image: zhaohuabing/istio-opentracing-demo:opentracing
+        ports:
+        - containerPort: 8080
+        env:
+          - name: JAEGER_ENDPOINT
+            value: "http://simplest-collector.tracing:14268/api/traces"
+          - name: JAEGER_PROPAGATION
+            value: "b3"
+          - name: JAEGER_TRACEID_128BIT
+            value: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-v1
+  labels:
+    version: v1
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: inventory
+        version: v1
+    spec:
+      containers:
+      - name: inventory
+        image: zhaohuabing/istio-opentracing-demo:opentracing
+        ports:
+        - containerPort: 8080
+        env:
+          - name: JAEGER_ENDPOINT
+            value: "http://simplest-collector.tracing:14268/api/traces"
+          - name: JAEGER_PROPAGATION
+            value: "b3"
+          - name: JAEGER_TRACEID_128BIT
+            value: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-v1
+  labels:
+    version: v1
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: billing
+        version: v1
+    spec:
+      containers:
+      - name: billing
+        image: zhaohuabing/istio-opentracing-demo:opentracing
+        ports:
+        - containerPort: 8080
+        env:
+          - name: JAEGER_ENDPOINT
+            value: "http://simplest-collector.tracing:14268/api/traces"
+          - name: JAEGER_PROPAGATION
+            value: "b3"
+          - name: JAEGER_TRACEID_128BIT
+            value: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-v1
+  labels:
+    version: v1
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: delivery
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: delivery
+        version: v1
+    spec:
+      containers:
+      - name: delivery
+        image: zhaohuabing/istio-opentracing-demo:opentracing
+        ports:
+        - containerPort: 8080
+        env:
+          - name: JAEGER_ENDPOINT
+            value: "http://simplest-collector.tracing:14268/api/traces"
+          - name: JAEGER_PROPAGATION
+            value: "b3"
+          - name: JAEGER_TRACEID_128BIT
+            value: "true"
