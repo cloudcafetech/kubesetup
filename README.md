@@ -18,6 +18,10 @@ On Node host run following command
 
 ### Setup Kubernetes with version
 
+Find Kubernetes version 
+
+curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
+
 On Master host run following command
 
 ```curl -s https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/host-setup.sh | KUBEMASTER=<MASTER-IP> K8S_VER=1.18.2 bash -s master```
