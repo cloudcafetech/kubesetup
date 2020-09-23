@@ -40,7 +40,7 @@ exclude=kubelet kubeadm kubectl
 EOF
 
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
-yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix
+yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk
 
 # Setup for docker
 curl -fsSL https://get.docker.com -o get-docker.sh
