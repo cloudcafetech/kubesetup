@@ -2,6 +2,10 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: kubenfs-storage
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"  
 provisioner: kubenfs
 parameters:
   archiveOnDelete: "false"
+reclaimPolicy: Delete
+allowVolumeExpansion: true  
