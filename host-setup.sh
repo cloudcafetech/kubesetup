@@ -140,6 +140,11 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/traci
 chmod +x ./tracing-setup.sh
 #./tracing-setup.sh
 
+# Kafka setup
+wget https://raw.githubusercontent.com/cloudcafetech/ocpsetup/master/kafka-setup.sh
+chmod +x ./kafka-setup.sh
+#./kafka-setup.sh
+
 # Install krew
 set -x; cd "$(mktemp -d)" &&
   curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
