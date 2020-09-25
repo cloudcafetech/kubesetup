@@ -141,7 +141,7 @@ chmod +x ./tracing-setup.sh
 #./tracing-setup.sh
 
 # Kafka setup
-wget https://raw.githubusercontent.com/cloudcafetech/ocpsetup/master/kafka-setup.sh
+wget https://raw.githubusercontent.com/cloudcafetech/kafka-on-container/master/kafka-setup.sh
 chmod +x ./kafka-setup.sh
 #./kafka-setup.sh
 
