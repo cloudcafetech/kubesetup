@@ -29,8 +29,8 @@ velero install \
     --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://$MinIO:9000 \
     --snapshot-location-config region=minio
     
-kubectl patch deploy velero -n velero --type merge -p '{"spec": {"template": {"spec": {"nodeSelector": {"beta.kubernetes.io/os": "linux"}}}}}'
-kubectl patch ds restic -n velero --type merge -p '{"spec": {"template": {"spec": {"nodeSelector": {"beta.kubernetes.io/os": "linux"}}}}}'    
+#kubectl patch deploy velero -n velero --type merge -p '{"spec": {"template": {"spec": {"nodeSelector": {"beta.kubernetes.io/os": "linux"}}}}}'
+#kubectl patch ds restic -n velero --type merge -p '{"spec": {"template": {"spec": {"nodeSelector": {"beta.kubernetes.io/os": "linux"}}}}}'    
     
 wget https://raw.githubusercontent.com/cloudcafetech/velero-backup-restore/master/velero-volume-controller.yaml    
 kubectl create -f velero-volume-controller.yaml    
