@@ -19,8 +19,6 @@ aws_access_key_id = admin
 aws_secret_access_key = admin2675
 EOF
 
-cp /home/centos/rootCA.pem $HOME/
-
 velero install \
     --provider aws \
     --bucket velero-cluster1 \
@@ -28,8 +26,7 @@ velero install \
     --use-restic \
     --secret-file ./credentials-velero \
     --use-volume-snapshots=true \
-    --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=https://$MinIO,insecureSkipTLSVerify="true" \
-    --cacert rootCA.pem \
+    --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://$MinIO:9000 \
     --snapshot-location-config region=minio
     
 kubectl patch deploy velero -n velero --type merge -p '{"spec": {"template": {"spec": {"nodeSelector": {"beta.kubernetes.io/os": "linux"}}}}}'
