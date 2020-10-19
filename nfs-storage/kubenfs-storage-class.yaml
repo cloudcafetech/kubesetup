@@ -7,5 +7,5 @@ metadata:
 provisioner: kubenfs
 parameters:
   archiveOnDelete: "false"
-reclaimPolicy: Retain
+reclaimPolicy: Delete
 allowVolumeExpansion: true  
