@@ -25,3 +25,13 @@ Then run below command ....
 kubectl create ns monitoring
 kubectl create -f kubemon.yaml -n monitoring
 ```
+
+### CTOP (Container TOP)
+Top-like Interface for Monitoring Docker Containers
+
+```
+export VER="0.7.3"
+wget https://github.com/bcicen/ctop/releases/download/v${VER}/ctop-${VER}-linux-amd64 -O ctop
+chmod +x ctop
+sudo mv ctop /usr/local/bin/ctop
+```
