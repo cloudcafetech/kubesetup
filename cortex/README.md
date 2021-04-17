@@ -3,6 +3,9 @@
 
 ### Setup Cortex
 
+Run below command.
+
+```docker-compose up -d```
 
 ### Setup Kubernetes Cluster with KIND
 
