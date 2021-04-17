@@ -1,0 +1,64 @@
+version: "3.7"
+services:
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - cortex_network
+    volumes:
+      - "./cortex-data/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml"
+
+  consul:
+    image: consul
+    restart: on-failure
+    networks:
+      - cortex_network
+
+
+  cortex1:
+    image: quay.io/cortexproject/cortex:v0.1.0
+    restart: on-failure
+    networks:
+      - cortex_network
+    ports:
+      - "9009:9009"
+    volumes:
+      - "./cortex-data/single-process-config.yaml:/etc/single-process-config.yaml"
+    command: [
+      "-config.file=/etc/single-process-config.yaml",
+      "-ring.store=consul",
+      "-consul.hostname=consul:8500",
+      "-distributor.replication-factor=3",
+      ]
+
+  cortex2:
+    image: quay.io/cortexproject/cortex:v0.1.0
+    restart: on-failure
+    networks:
+      - cortex_network
+    volumes:
+      - "./cortex-data/single-process-config.yaml:/etc/single-process-config.yaml"
+    command: [
+      "-config.file=/etc/single-process-config.yaml",
+      "-ring.store=consul",
+      "-consul.hostname=consul:8500",
+      "-distributor.replication-factor=3"
+      ]
+
+  cortex3:
+    image: quay.io/cortexproject/cortex:v0.1.0
+    restart: on-failure
+    networks:
+      - cortex_network
+    volumes:
+      - "./cortex-data/single-process-config.yaml:/etc/single-process-config.yaml"
+    command: [
+      "-config.file=/etc/single-process-config.yaml",
+      "-ring.store=consul",
+      "-consul.hostname=consul:8500",
+      "-distributor.replication-factor=3"
+      ]
+
+networks:
+  cortex_network:
