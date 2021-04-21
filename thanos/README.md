@@ -72,7 +72,7 @@ kubectl create -f thanos-central.yaml -n monitoring
 kubectl create -f ingress-thanos.yaml -n monitoring
 ```
 
-Once everythings are up and running then deploy Alertmanager & Grafana.
+- 4th once everythings are up and running then deploy Alertmanager & Grafana.
 
 ```
 kubectl create -f alertmanager.yaml -n monitoring
