@@ -43,18 +43,41 @@ mc mb minio/thanos-ruler --insecure
 
 ### Setup Prometheus Monitoring on Edge Cluster
 
-Edit ```kubemon.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of cortex server in ```remote_write``` section.
+Edit ```prom-thanos-kube-node.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of Minio server in ```thanos-minio-credentials``` configmap.
 
 Then run below command ....
 
 ```
-kubectl create ns monitoring
-kubectl create -f kubemon.yaml -n monitoring
+kubectl create -f prom-thanos-kube-node.yaml -n monitoring
+```
+
+##### NOTE: Additionally you can deploy Alertmanager & Grafana.
+
+```
+kubectl create -f alertmanager.yaml -n monitoring
+kubectl create -f grafana.yaml -n monitoring
 ```
 
 ### Setup Prometheus Monitoring on Central Observibility Cluster
 
+- 1st edit ```prom-thanos-kube-node.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of Minio server in ```thanos-minio-credentials``` configmap.
+- 2nd edit ```thanos-central.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of Minio server in ```thanos-minio-credentials-ruler``` configmap.
+- 3rd edit ```ingress-thanos.yaml```
 
+Then run below command ....
+
+```
+kubectl create -f prom-thanos-kube-node.yaml -n monitoring
+kubectl create -f thanos-central.yaml -n monitoring
+kubectl create -f ingress-thanos.yaml -n monitoring
+```
+
+Once everythings are up and running then deploy Alertmanager & Grafana.
+
+```
+kubectl create -f alertmanager.yaml -n monitoring
+kubectl create -f grafana.yaml -n monitoring
+```
 
 ### CTOP (Container TOP)
 Top-like Interface for Monitoring Docker Containers
