@@ -1,0 +1,692 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring
+  namespace: monitoring
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring
+subjects:
+  - kind: ServiceAccount
+    name: monitoring
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: monitoring
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-server-conf
+  labels:
+    name: prometheus-server-conf
+  namespace: monitoring
+data:
+  prometheus.yaml: |-
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+      external_labels:
+        cluster: kind-central
+        # Each Prometheus has to have unique labels.
+        replica: $(POD_NAME)
+
+    rule_files:
+      - /etc/prometheus/rules/*rules.yaml
+
+    alerting:
+
+      # We want our alerts to be deduplicated
+      # from different replicas.
+      alert_relabel_configs:
+      - regex: replica
+        action: labeldrop
+
+      alertmanagers:
+        - scheme: http
+          path_prefix: /
+          static_configs:
+            - targets: ['alertmanager:9093']
+
+    scrape_configs:
+    - job_name: kubernetes-nodes-cadvisor
+      scrape_interval: 10s
+      scrape_timeout: 10s
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+        - role: node
+      relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        # Only for Kubernetes ^1.7.3.
+        # See: https://github.com/prometheus/prometheus/issues/2916
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+      metric_relabel_configs:
+        - action: replace
+          source_labels: [id]
+          regex: '^/machine\.slice/machine-rkt\\x2d([^\\]+)\\.+/([^/]+)\.service$'
+          target_label: rkt_container_name
+          replacement: '${2}-${1}'
+        - action: replace
+          source_labels: [id]
+          regex: '^/system\.slice/(.+)\.service$'
+          target_label: systemd_service_name
+          replacement: '${1}'
+
+    - job_name: 'kubernetes-pods'
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_pod_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          action: replace
+          target_label: kubernetes_pod_name
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+          action: replace
+          target_label: __scheme__
+          regex: (https?)
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+        - source_labels: [__address__, __meta_kubernetes_pod_prometheus_io_port]
+          action: replace
+          target_label: __address__
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+
+
+    - job_name: 'kubernetes-apiservers'
+      kubernetes_sd_configs:
+        - role: endpoints
+      scheme: https 
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+
+    - job_name: 'kubernetes-service-endpoints'
+      kubernetes_sd_configs:
+        - role: endpoints
+      relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_service_name]
+          action: replace
+          target_label: kubernetes_name
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+          action: replace
+          target_label: __scheme__
+          regex: (https?)
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+          action: replace
+          target_label: __address__
+          regex: (.+)(?::\d+);(\d+)
+          replacement: $1:$2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  labels:
+    name: prometheus-rules
+  namespace: monitoring
+data:
+  alert-rules.yaml: |-
+    groups:
+      - name: Deployment
+        rules:
+        - alert: Deployment at 0 Replicas
+          annotations:
+            summary: Deployment {{$labels.deployment}} in {{$labels.namespace}} is currently having no pods running
+          expr: |
+            sum(kube_deployment_status_replicas{pod_template_hash=""}) by (deployment,namespace)  < 1
+          for: 1m
+          labels:
+            team: devops
+        - alert: HPA Scaling Limited  
+          annotations: 
+            summary: HPA named {{$labels.hpa}} in {{$labels.namespace}} namespace has reached scaling limited state
+          expr: | 
+            (sum(kube_hpa_status_condition{condition="ScalingLimited",status="true"}) by (hpa,namespace)) == 1
+          for: 1m
+          labels: 
+            team: devops
+        - alert: HPA at MaxCapacity 
+          annotations: 
+            summary: HPA named {{$labels.hpa}} in {{$labels.namespace}} namespace is running at Max Capacity
+          expr: | 
+            ((sum(kube_hpa_spec_max_replicas) by (hpa,namespace)) - (sum(kube_hpa_status_current_replicas) by (hpa,namespace))) == 0
+          for: 1m
+          labels: 
+            team: devops
+      - name: Pods
+        rules:
+        - alert: Container restarted
+          annotations:
+            summary: Container named {{$labels.container}} in {{$labels.pod}} in {{$labels.namespace}} was restarted
+          expr: |
+            sum(increase(kube_pod_container_status_restarts_total{namespace!="kube-system",pod_template_hash=""}[1m])) by (pod,namespace,container) > 0
+          for: 0m
+          labels:
+            team: dev
+        - alert: High Memory Usage of Container 
+          annotations: 
+            summary: Container named {{$labels.container}} in {{$labels.pod}} in {{$labels.namespace}} is using more than 75% of Memory Limit
+          expr: | 
+            ((( sum(container_memory_usage_bytes{image!="",container_name!="POD", namespace!="kube-system"}) by (namespace,container_name,pod_name)  / sum(container_spec_memory_limit_bytes{image!="",container_name!="POD",namespace!="kube-system"}) by (namespace,container_name,pod_name) ) * 100 ) < +Inf ) > 75
+          for: 5m
+          labels: 
+            team: dev
+        - alert: High CPU Usage of Container 
+          annotations: 
+            summary: Container named {{$labels.container}} in {{$labels.pod}} in {{$labels.namespace}} is using more than 75% of CPU Limit
+          expr: | 
+            ((sum(irate(container_cpu_usage_seconds_total{image!="",container_name!="POD", namespace!="kube-system"}[30s])) by (namespace,container_name,pod_name) / sum(container_spec_cpu_quota{image!="",container_name!="POD", namespace!="kube-system"} / container_spec_cpu_period{image!="",container_name!="POD", namespace!="kube-system"}) by (namespace,container_name,pod_name) ) * 100)  > 75
+          for: 5m
+          labels: 
+            team: dev
+      - name: Nodes
+        rules:
+        - alert: High Node Memory Usage
+          annotations:
+            summary: Node {{$labels.kubernetes_io_hostname}} has more than 80% memory used. Plan Capcity
+          expr: |
+            (sum (container_memory_working_set_bytes{id="/",container_name!="POD"}) by (kubernetes_io_hostname) / sum (machine_memory_bytes{}) by (kubernetes_io_hostname) * 100) > 80
+          for: 5m
+          labels:
+            team: devops
+        - alert: High Node CPU Usage
+          annotations:
+            summary: Node {{$labels.kubernetes_io_hostname}} has more than 80% allocatable cpu used. Plan Capacity.
+          expr: |
+            (sum(rate(container_cpu_usage_seconds_total{id="/", container_name!="POD"}[1m])) by (kubernetes_io_hostname) / sum(machine_cpu_cores) by (kubernetes_io_hostname)  * 100) > 80
+          for: 5m
+          labels:
+            team: devops
+        - alert: High Node Disk Usage
+          annotations:
+            summary: Node {{$labels.kubernetes_io_hostname}} has more than 85% disk used. Plan Capacity.
+          expr: |
+            (sum(container_fs_usage_bytes{device=~"^/dev/[sv]d[a-z][1-9]$",id="/",container_name!="POD"}) by (kubernetes_io_hostname) / sum(container_fs_limit_bytes{container_name!="POD",device=~"^/dev/[sv]d[a-z][1-9]$",id="/"}) by (kubernetes_io_hostname)) * 100 > 85
+          for: 5m
+          labels:
+            team: devops
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-minio-credentials
+  namespace: monitoring
+data:
+  minios3.yml: |-
+    type: S3
+    config:
+      endpoint: 172.31.39.182:9000
+      bucket: thanos
+      access_key: admin
+      secret_key: admin2675
+      insecure: true
+      signature_version2: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 3
+  serviceName: prometheus-service
+  selector:
+    matchLabels: 
+      app: prometheus
+      thanos-store-api: "true"
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        thanos-store-api: "true"
+    spec:
+      serviceAccountName: monitoring
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.4.3
+          args:
+            - "--storage.tsdb.retention=6h"
+            - "--config.file=/etc/prometheus/prometheus.yaml"
+            - "--storage.tsdb.path=/prometheus/"
+            - "--web.enable-lifecycle"
+            - "--storage.tsdb.no-lockfile"
+            - "--storage.tsdb.min-block-duration=2h"
+            - "--storage.tsdb.max-block-duration=2h"
+          ports:
+            - name: prometheus
+              containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage
+              mountPath: /prometheus/
+            - name: prometheus-config-shared
+              mountPath: /etc/prometheus-shared/
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+        - name: thanos
+          image: quay.io/thanos/thanos:v0.8.0
+          args:
+            - "sidecar"
+            - "--log.level=debug"
+            - "--tsdb.path=/prometheus"
+            - "--prometheus.url=http://127.0.0.1:9090"
+            - "--objstore.config-file=/etc/secret/minios3.yml"
+            - "--reloader.config-envsubst-file=/etc/prometheus/prometheus.yaml"
+            - "--reloader.rule-dir=/etc/prometheus/rules/"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: http-sidecar
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          livenessProbe:
+              httpGet:
+                port: 10902
+                path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: 10902
+              path: /-/ready
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage
+              mountPath: /prometheus
+            - name: prometheus-config-shared
+              mountPath: /etc/prometheus-shared/
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+            - name: thanos-minio-credentials
+              mountPath: /etc/secret
+              readOnly: false
+      securityContext:
+        fsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 1000
+      volumes:
+        - name: prometheus-config
+          configMap:
+            defaultMode: 420
+            name: prometheus-server-conf
+        - name: prometheus-storage
+          emptyDir: {}
+        - name: prometheus-config-shared
+          emptyDir: {}
+        - name: prometheus-rules
+          configMap:
+            name: prometheus-rules
+        - name: thanos-minio-credentials
+          configMap:
+            defaultMode: 420
+            name: thanos-minio-credentials
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: prometheus-0-service
+  annotations: 
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+  namespace: monitoring
+  labels:
+    name: prometheus
+spec:
+  selector: 
+    statefulset.kubernetes.io/pod-name: prometheus-0
+  ports: 
+    - name: prometheus 
+      port: 8080
+      targetPort: prometheus
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: prometheus-1-service
+  annotations: 
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+  namespace: monitoring
+  labels:
+    name: prometheus
+spec:
+  selector: 
+    statefulset.kubernetes.io/pod-name: prometheus-1
+  ports: 
+    - name: prometheus 
+      port: 8080
+      targetPort: prometheus
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: prometheus-2-service
+  annotations: 
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+  namespace: monitoring
+  labels:
+    name: prometheus
+spec:
+  selector: 
+    statefulset.kubernetes.io/pod-name: prometheus-2
+  ports: 
+    - name: prometheus 
+      port: 8080
+      targetPort: prometheus
+---
+#This service creates a srv record for querier to find about store-api's
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-store-gateway
+  namespace: monitoring
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: grpc
+      port: 10901
+      targetPort: grpc
+  selector:
+    thanos-store-api: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1 
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+rules:
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  - nodes
+  - pods
+  - services
+  - resourcequotas
+  - replicationcontrollers
+  - limitranges
+  - persistentvolumeclaims
+  - persistentvolumes
+  - namespaces
+  - endpoints
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions"]
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  verbs: ["list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  - jobs
+  verbs: ["list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kube-state-metrics-resizer
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: monitoring
+  name: kube-state-metrics-resizer
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["get"]
+- apiGroups: ["extensions"]
+  resources:
+  - deployments
+  resourceNames: ["kube-state-metrics"]
+  verbs: ["get", "update"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-state-metrics
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: quay.io/mxinden/kube-state-metrics:v1.4.0-gzip.3
+        ports:
+        - name: http-metrics
+          containerPort: 8080
+        - name: telemetry
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      - name: addon-resizer
+        image: k8s.gcr.io/addon-resizer:1.8.3
+        resources:
+          limits:
+            cpu: 150m
+            memory: 50Mi
+          requests:
+            cpu: 150m
+            memory: 50Mi
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        command:
+          - /pod_nanny
+          - --container=kube-state-metrics
+          - --cpu=100m
+          - --extra-cpu=1m
+          - --memory=100Mi
+          - --extra-memory=2Mi
+          - --threshold=5
+          - --deployment=kube-state-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+  labels:
+    k8s-app: kube-state-metrics
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    targetPort: http-metrics
+    protocol: TCP
+  - name: telemetry
+    port: 8081
+    targetPort: telemetry
+    protocol: TCP
+  selector:
+    k8s-app: kube-state-metrics
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    name: node-exporter
+spec:
+  selector:
+    matchLabels:
+      name: node-exporter
+  template:
+    metadata:
+      labels:
+        name: node-exporter
+      annotations:
+         prometheus.io/scrape: "true"
+         prometheus.io/port: "9100"
+    spec:
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:v0.16.0
+          securityContext:
+            privileged: true
+          args:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+          ports:
+            - containerPort: 9100
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 100Mi
+          volumeMounts:
+            - name: dev
+              mountPath: /host/dev
+            - name: proc
+              mountPath: /host/proc
+            - name: sys
+              mountPath: /host/sys
+            - name: rootfs
+              mountPath: /rootfs
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: rootfs
+          hostPath:
+            path: /
