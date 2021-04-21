@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-minio-credentials
+  namespace: monitoring
+data:
+  minios3.yml: |-
+    type: S3
+    config:
+      endpoint: 172.31.39.182:9000
+      bucket: thanos
+      access_key: admin
+      secret_key: admin2675
+      insecure: true
+      signature_version2: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-querier
+  namespace: monitoring
+  labels:
+    app: thanos-querier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-querier
+  template:
+    metadata:
+      labels:
+        app: thanos-querier
+    spec:
+      containers:
+      - name: thanos
+        #image: quay.io/thanos/thanos:v0.8.0
+        image: quay.io/thanos/thanos:v0.19.0
+        args:
+        - query
+        - --log.level=debug
+        - --query.replica-label=replica
+        - --store=dnssrv+thanos-store-gateway:10901
+        ports:
+        - name: http
+          containerPort: 10902
+        - name: grpc
+          containerPort: 10901
+        livenessProbe:
+          httpGet:
+            port: http
+            path: /-/healthy
+        readinessProbe:
+          httpGet:
+            port: http
+            path: /-/ready
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: thanos-querier
+  name: thanos-querier
+  namespace: monitoring
+spec:
+  ports:
+  - port: 9090
+    protocol: TCP
+    targetPort: http
+    name: http
+  selector:
+    app: thanos-querier
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store-gateway
+  namespace: monitoring
+  labels:
+    app: thanos-store-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-store-gateway
+      thanos-store-api: "true"
+  serviceName: thanos-store-gateway
+  template:
+    metadata:
+      labels:
+        app: thanos-store-gateway
+        thanos-store-api: "true"
+    spec:
+      containers:
+        - name: thanos
+          #image: quay.io/thanos/thanos:v0.8.0
+          image: quay.io/thanos/thanos:v0.19.0
+          args:
+          - "store"
+          - "--log.level=debug"
+          - "--data-dir=/data"
+          - "--objstore.config-file=/etc/secret/minios3.yml"
+          - "--index-cache-size=500MB"
+          - "--chunk-pool-size=500MB"
+          ports:
+          - name: http
+            containerPort: 10902
+          - name: grpc
+            containerPort: 10901
+          livenessProbe:
+            httpGet:
+              port: 10902
+              path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: 10902
+              path: /-/ready
+          volumeMounts:
+            - name: thanos-minio-credentials
+              mountPath: /etc/secret
+              readOnly: false
+      volumes:
+        - name: thanos-minio-credentials
+          configMap:
+            defaultMode: 420
+            name: thanos-minio-credentials
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app: thanos-compactor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-compactor
+  serviceName: thanos-compactor
+  template:
+    metadata:
+      labels:
+        app: thanos-compactor
+    spec:
+      containers:
+        - name: thanos
+          #image: quay.io/thanos/thanos:v0.8.0
+          image: quay.io/thanos/thanos:v0.19.0
+          args:
+            - "compact"
+            - "--log.level=debug"
+            - "--data-dir=/data"
+            - "--objstore.config-file=/etc/secret/minios3.yml"
+            - "--wait"
+          ports:
+            - name: http
+              containerPort: 10902
+          livenessProbe:
+            httpGet:
+              port: 10902
+              path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: 10902
+              path: /-/ready
+          volumeMounts:
+            - name: thanos-minio-credentials
+              mountPath: /etc/secret
+              readOnly: false
+      volumes:
+        - name: thanos-minio-credentials
+          configMap:
+            defaultMode: 420
+            name: thanos-minio-credentials
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-ruler-rules
+  namespace: monitoring
+data:
+  alert_down_services.rules.yaml: |
+    groups:
+    - name: metamonitoring
+      rules:
+      - alert: PrometheusReplicaDown
+        annotations:
+          message: Prometheus replica in cluster {{$labels.cluster}} has disappeared from Prometheus target discovery.
+        expr: |
+          sum(up{cluster!="", instance=~".*:9090", job="kubernetes-service-endpoints"}) by (job,cluster) < 3
+        for: 15s
+        labels:
+          severity: critical
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-minio-credentials-ruler
+  namespace: monitoring
+data:
+  minios3ruler.yml: |-
+    type: S3
+    config:
+      endpoint: 172.31.39.182:9000
+      bucket: thanos-ruler
+      access_key: admin
+      secret_key: admin2675
+      insecure: true
+      signature_version2: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: thanos-ruler
+  name: thanos-ruler
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-ruler
+      thanos-store-api: "true"
+  serviceName: thanos-ruler
+  template:
+    metadata:
+      labels:
+        app: thanos-ruler
+        thanos-store-api: "true"
+    spec:
+      containers:
+        - name: thanos
+          #image: quay.io/thanos/thanos:v0.8.0
+          image: quay.io/thanos/thanos:v0.19.0
+          args:
+            - rule
+            - --log.level=debug
+            - --data-dir=/data
+            - --eval-interval=15s
+            - --rule-file=/etc/thanos-ruler/*.rules.yaml
+            - --alertmanagers.url=http://alertmanager:9093
+            - --query=thanos-querier:9090
+            - "--objstore.config-file=/etc/secret/minios3ruler.yml"
+            - --label=ruler_cluster="kind-central"
+            - --label=replica="$(POD_NAME)"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: http
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          livenessProbe:
+            httpGet:
+              port: http
+              path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: http
+              path: /-/ready
+          volumeMounts:
+            - mountPath: /etc/thanos-ruler
+              name: config
+            - name: thanos-minio-credentials-ruler
+              mountPath: /etc/secret
+              readOnly: false
+      volumes:
+        - configMap:
+            name: thanos-ruler-rules
+          name: config
+        - name: thanos-minio-credentials-ruler
+          configMap:
+            defaultMode: 420
+            name: thanos-minio-credentials-ruler
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: thanos-ruler
+  name: thanos-ruler
+  namespace: monitoring
+spec:
+  ports:
+    - port: 9090
+      protocol: TCP
+      targetPort: http
+      name: http
+  selector:
+    app: thanos-ruler
