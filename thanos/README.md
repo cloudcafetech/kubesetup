@@ -11,7 +11,7 @@ Then run below command ....
 ### Setup Ingress Controller
 
 ```
-kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/kafka-on-container/master/kube-kind-ingress.yaml
+kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/thanos/kube-kind-ingress.yaml
 kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 kubectl delete ValidatingWebhookConfiguration ingress-nginx-admission
 sleep 15
@@ -29,7 +29,7 @@ kubectl create ns monitoring
 kubectl create -f kubemon.yaml -n monitoring
 ```
 
-### Setup Prometheus Monitoring on Edge Cluster
+### Setup Prometheus Monitoring on Central Observibility Cluster
 
 
 
