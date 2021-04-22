@@ -187,7 +187,7 @@ data:
         annotations:
           message: Prometheus replica in cluster {{$labels.cluster}} has disappeared from Prometheus target discovery.
         expr: |
-          sum(up{cluster!="", instance=~".*:9090", job="kubernetes-service-endpoints"}) by (job,cluster) < 3
+          sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
         for: 15s
         labels:
           severity: critical
