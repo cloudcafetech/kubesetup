@@ -3295,6 +3295,6 @@
   },
   "timezone": "browser",
   "title": "⭐️ Kubernetes PoD Monitoring",
-  "uid": "KupePodMon",
+  "uid": "KubePodMon",
   "version": 1
 }
