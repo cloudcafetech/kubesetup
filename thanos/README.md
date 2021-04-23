@@ -62,7 +62,7 @@ kubectl create -f grafana.yaml -n monitoring
 
 - 1st edit ```prom-thanos-kube-node.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of Minio server in ```thanos-minio-credentials``` configmap.
 - 2nd edit ```thanos-central.yaml``` file and change cluster name in ```external_labels``` section and change ```IP Address``` of Minio server in ```thanos-minio-credentials-ruler``` configmap.
-- 3rd edit ```ingress-thanos.yaml```
+- 3rd edit ```ingress-thanos.yaml``` and ```ingress-thanos-ruler.yaml```
 
 Then run below command ....
 
@@ -70,6 +70,7 @@ Then run below command ....
 kubectl create -f prom-thanos-kube-node.yaml -n monitoring
 kubectl create -f thanos-central.yaml -n monitoring
 kubectl create -f ingress-thanos.yaml -n monitoring
+kubectl create -f ingress-thanos-ruler.yaml -n monitoring
 ```
 
 - 4th once everythings are up and running then deploy Alertmanager & Grafana.
@@ -77,6 +78,8 @@ kubectl create -f ingress-thanos.yaml -n monitoring
 ```
 kubectl create -f alertmanager.yaml -n monitoring
 kubectl create -f grafana.yaml -n monitoring
+kubectl create -f ingress-alert.yaml -n monitoring
+kubectl create -f ingress-grafana.yaml -n monitoring
 ```
 
 ### CTOP (Container TOP)
