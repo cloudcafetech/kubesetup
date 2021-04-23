@@ -56,6 +56,8 @@ kubectl create -f prom-thanos-kube-node.yaml -n monitoring
 ```
 kubectl create -f alertmanager.yaml -n monitoring
 kubectl create -f grafana.yaml -n monitoring
+kubectl create -f ingress-thanos.yaml -n monitoring
+kubectl create -f ingress-thanos-ruler.yaml -n monitoring
 ```
 
 ### Setup Prometheus Monitoring on Central Observibility Cluster
