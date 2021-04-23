@@ -174,39 +174,25 @@ spec:
             name: thanos-minio-credentials
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: ServiceAccount
 metadata:
-  name: thanos-ruler-rules
+  name: thanos-ruler
   namespace: monitoring
-data:
-  alert_down_services.rules.yaml: |
-    groups:
-    - name: metamonitoring
-      rules:
-      - alert: PrometheusReplicaDown
-        annotations:
-          message: Prometheus replica in cluster {{$labels.cluster}} has disappeared from Prometheus target discovery.
-        expr: |
-          sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
-        for: 15s
-        labels:
-          severity: critical
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: thanos-minio-credentials-ruler
+  name: thanos-ruler-configmap
   namespace: monitoring
 data:
-  minios3ruler.yml: |-
-    type: S3
-    config:
-      endpoint: 172.31.39.182:9000
-      bucket: thanos-ruler
-      access_key: admin
-      secret_key: admin2675
-      insecure: true
-      signature_version2: true
+  ruler.yml: |-
+    groups:
+      - name: "centralmonitoring"
+        rules:
+          - alert: "PrometheusDown"
+            expr: sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
+          - alert: "TooManyPods"
+            expr: sum(kubelet_running_pods) > 15
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -229,52 +215,78 @@ spec:
         thanos-store-api: "true"
     spec:
       containers:
-        - name: thanos
-          #image: quay.io/thanos/thanos:v0.8.0
-          image: quay.io/thanos/thanos:v0.19.0
-          args:
-            - rule
-            - --log.level=debug
-            - --data-dir=/data
-            - --eval-interval=15s
-            - --rule-file=/etc/thanos-ruler/*.rules.yaml
-            - --alertmanagers.url=http://alertmanager:9093
-            - --query=thanos-querier:9090
-            - "--objstore.config-file=/etc/secret/minios3ruler.yml"
-            - --label=ruler_cluster="kind-central"
-            - --label=replica="$(POD_NAME)"
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-          ports:
-            - name: http
-              containerPort: 10902
-            - name: grpc
-              containerPort: 10901
-          livenessProbe:
-            httpGet:
-              port: http
-              path: /-/healthy
-          readinessProbe:
-            httpGet:
-              port: http
-              path: /-/ready
-          volumeMounts:
-            - mountPath: /etc/thanos-ruler
-              name: config
-            - name: thanos-minio-credentials-ruler
-              mountPath: /etc/secret
-              readOnly: false
+      - args:
+        - rule
+        - --log.level=info
+        - --log.format=logfmt
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:10902
+        - --data-dir=/data
+        - --eval-interval=1m
+        - --alertmanagers.url=http://alertmanager.monitoring.svc.cluster.local:9093
+        - --query=dnssrv+_http._tcp.thanos-querier.monitoring.svc.cluster.local
+        - --label=replica="$(POD_NAME)"
+        - --label=central_cluster="kind-cluster"
+        - --alert.label-drop=replica
+        - --objstore.config-file=/conf/objstore/minios3.yml
+        - --rule-file=/conf/rules/ruler.yml
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        #image: docker.io/bitnami/thanos:0.19.0-scratch-r0
+        image: quay.io/thanos/thanos:v0.19.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/healthy
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 30
+        name: ruler
+        ports:
+        - containerPort: 10902
+          name: http
+          protocol: TCP
+        - containerPort: 10901
+          name: grpc
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 30
+        volumeMounts:
+        - mountPath: /conf/rules
+          name: ruler-config
+        - mountPath: /conf/objstore
+          name: thanos-minio-credentials
+        - mountPath: /data
+          name: data
+      serviceAccount: thanos-ruler
+      serviceAccountName: thanos-ruler
       volumes:
-        - configMap:
-            name: thanos-ruler-rules
-          name: config
-        - name: thanos-minio-credentials-ruler
-          configMap:
-            defaultMode: 420
-            name: thanos-minio-credentials-ruler
+      - name: data
+        emptyDir: {}
+      - configMap:
+          defaultMode: 420
+          name: thanos-ruler-configmap
+        name: ruler-config
+      - configMap:
+          defaultMode: 420
+          name: thanos-minio-credentials
+        name: thanos-minio-credentials
 ---
 apiVersion: v1
 kind: Service
