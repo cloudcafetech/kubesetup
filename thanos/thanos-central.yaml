@@ -192,7 +192,7 @@ data:
           - alert: "PrometheusDown"
             expr: sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
           - alert: "TooManyPods"
-            expr: sum(kubelet_running_pods) > 15
+            expr: sum by(cluster) (kubelet_running_pods{cluster!=""}) >15
 ---
 apiVersion: apps/v1
 kind: StatefulSet
