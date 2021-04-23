@@ -48,6 +48,7 @@ Edit ```prom-thanos-kube-node.yaml``` file and change cluster name in ```externa
 Then run below command ....
 
 ```
+kubectl create ns monitoring
 kubectl create -f prom-thanos-kube-node.yaml -n monitoring
 ```
 
