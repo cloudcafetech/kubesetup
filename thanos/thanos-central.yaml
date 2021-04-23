@@ -190,9 +190,20 @@ data:
       - name: "centralmonitoring"
         rules:
           - alert: "PrometheusDown"
+            annotations:
+              message: Prometheus replica in cluster {{$labels.cluster}} has disappeared.
             expr: sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
+            for: 15s
+            labels:
+              severity: critical
+
           - alert: "TooManyPods"
-            expr: sum by(cluster) (kubelet_running_pods{cluster!=""}) >15
+            annotations:
+              message: Too many pods in cluster {{$labels.cluster}} on node {{$labels.instance}}
+            expr: sum by(cluster,instance) (kubelet_running_pods{cluster!="",instance!=""}) >15
+            for: 15s
+            labels:
+              severity: warning
 ---
 apiVersion: apps/v1
 kind: StatefulSet
