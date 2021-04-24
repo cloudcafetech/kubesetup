@@ -1,5 +1,7 @@
 ## Kubenetes Multi Cluster Monitoring with Thanos
 
+Kubernetes multi-cluster monitoring using Prometheus & Thanos, which has long-term storage capabilities and allows to view monitoring information across clusters.
+
 ### Setup Kubernetes Cluster with KIND
 
 Create a single or multi node KIND Kubernetes cluster from ```kind-cluster.yaml```. Copy yaml into ```kind-single-node.yaml``` or ```kind-multi-node.yaml``` file and change ```apiServerAddress``` with server (VM) IP Address.
