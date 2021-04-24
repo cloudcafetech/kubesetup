@@ -2,7 +2,7 @@
 
 ### Setup Kubernetes Cluster with KIND
 
-Edit KIND yaml ```kind-single-node.yaml``` file and change ```apiServerAddress``` with server (VM) IP Address.
+Create a single or multi node cluster from ```kind-cluster.yaml```. Copy yaml into ```kind-single-node.yaml``` or ```kind-multi-node.yaml``` file and change ```apiServerAddress``` with server (VM) IP Address.
 
 Then run below command ....
 
