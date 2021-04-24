@@ -18,7 +18,7 @@ sleep 15
 kubectl delete job.batch/ingress-nginx-admission-patch -n kube-router
 ```
 
-### Setup Minio for S3 type long term storage and create two (thanos & thanos-ruler) buckets
+### Setup Minio for S3 type long term storage and create one (thanos) bucket.
 
 ```
 mkdir -p /root/minio/data
@@ -38,7 +38,6 @@ MinIO=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 wget https://dl.min.io/client/mc/release/linux-amd64/mc; chmod +x mc; mv -v mc /usr/local/bin/mc
 mc config host add minio http://$MinIO:9000 admin admin2675 --insecure
 mc mb minio/thanos --insecure
-mc mb minio/thanos-ruler --insecure
 ```
 
 ### Setup Prometheus Monitoring on Edge Cluster
