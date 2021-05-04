@@ -1,0 +1,196 @@
+cat <<EOF > credentials.txt
+[default]
+aws_region = us-east-2
+aws_access_key_id = AKIxxxxxx57
+aws_secret_access_key = yxxxxxx+JmZ2Rr8Yj
+EOF
+---
+cat credentials.txt | base64
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-credentials
+  namespace: monitoring
+data:
+  # Add in credentials the result of:
+  # cat credentials.txt | base64
+  credentials: |
+    xxxxxxx
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: yace-config
+  namespace: monitoring
+data:
+  config.yml: |
+    discovery:
+      jobs:
+      - regions:
+        - us-east-2
+        type: ec2
+        awsDimensions:
+          - InstanceId
+        addCloudwatchTimestamp: true
+        metrics:
+          - name: CPUUtilization
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: DiskReadBytes
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: DiskWriteBytes
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: DiskReadOps
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: DiskWriteOps
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: NetworkIn
+            period: 60
+            length: 120
+            statistics:
+              - Average
+          - name: NetworkOut
+            period: 60
+            length: 120
+            statistics:
+              - Average
+
+      - regions:
+        - us-east-2
+        type: elb
+        metrics:
+          - name: BackendConnectionErrors
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HealthyHostCount
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_Backend_2XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_Backend_3XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_Backend_4XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_Backend_5XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_ELB_4XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: HTTPCode_ELB_5XX
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+          - name: Latency
+            statistics:
+            - Average
+            - p95
+            period: 300
+            length: 3600
+          - name: RequestCount
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+          - name: SpilloverCount
+            statistics:
+            - Sum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: SurgeQueueLength
+            statistics:
+            - Maximum
+            period: 300
+            length: 3600
+            nilToZero: true
+          - name: UnHealthyHostCount
+            statistics:
+            - Minimum
+            period: 300
+            length: 3600
+            nilToZero: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yace
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: yace
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yace
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+    spec:
+      containers:
+      - name: yace
+        image: quay.io/invisionag/yet-another-cloudwatch-exporter:v0.26.3-alpha
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+          - name: yace-config
+            mountPath: /tmp/config.yml
+            subPath: config.yml
+          - name: aws-credentials
+            mountPath: /exporter/.aws/credentials
+            subPath: credentials
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: yace-config
+          name: yace-config
+        - secret:
+            defaultMode: 420
+            secretName: aws-credentials
+          name: aws-credentials
