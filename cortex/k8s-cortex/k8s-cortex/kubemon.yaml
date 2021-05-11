@@ -1,0 +1,764 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+rules:
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  - nodes
+  - pods
+  - services
+  - resourcequotas
+  - replicationcontrollers
+  - limitranges
+  - persistentvolumeclaims
+  - persistentvolumes
+  - namespaces
+  - endpoints
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions"]
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  verbs: ["list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  - jobs
+  verbs: ["list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubemon-kube-state-metrics
+  labels:
+    k8s-app: kube-state-metrics
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: kube-state-metrics
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-state-metrics
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: quay.io/coreos/kube-state-metrics:v1.9.6
+        imagePullPolicy: Always
+        ports:
+        # `8080` is used to scrape Kubernetes object state metrics
+        - name: http-metrics
+          containerPort: 8080
+        # `8081` to scrape its own general process metrics
+        - name: telemetry
+          containerPort: 8081
+        # A readiness probe is configured to hit `/healthz` at `8080`
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      - name: addon-resizer
+        image: k8s.gcr.io/addon-resizer:1.7
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 30Mi
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        command:
+          - /pod_nanny
+          - --container=kube-state-metrics
+          - --cpu=100m
+          - --extra-cpu=1m
+          - --memory=100Mi
+          - --extra-memory=2Mi
+          - --threshold=5
+          - --deployment=kubemon-kube-state-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubemon-kube-state-metrics
+  labels:
+    k8s-app: kube-state-metrics
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: kube-state-metrics
+spec:
+  ports:
+  # Exposed using the default ClusterIP service type
+  - name: http-metrics
+    port: 8080
+    targetPort: http-metrics
+    protocol: TCP
+  - name: telemetry
+    port: 8081
+    targetPort: telemetry
+    protocol: TCP
+  selector:
+    k8s-app: kube-state-metrics
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-exporter
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kubemon-node-exporter
+  labels:
+    k8s-app: node-exporter
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: node-exporter
+spec:
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      k8s-app: node-exporter
+  template:
+    metadata:
+      labels:
+        k8s-app: node-exporter
+    spec:
+      serviceAccountName: node-exporter
+      containers:
+        - name: prometheus-node-exporter
+          image: quay.io/prometheus/node-exporter:v0.18.1
+          imagePullPolicy: Always
+          args:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+          ports:
+            # Expose metrics for scraping on port `9100`
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly:  true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+          # Resource limits and requests of `10m` of CPU and `50Mi` of memory
+          resources:
+            limits:
+              cpu: 10m
+              memory: 50Mi
+            requests:
+              cpu: 10m
+              memory: 50Mi
+      hostNetwork: true
+      hostPID: true
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: kubemon-prometheus-config
+  labels:
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: prometheus
+data:
+  # If you'd like to add your own alerts or modify existing alerts, you can edit this ConfigMap value.
+  alerts.yaml: |-
+    "groups":
+    - name: apps-rules
+      rules:
+      - "alert": "KubeClientCertificateExpiration"
+        "annotations":
+          "message": "A client certificate used to authenticate to the apiserver is expiring in less than 7.0 days."
+        "expr": |
+          apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 604800
+        "labels":
+          "severity": "warning"
+  rules.yaml: |-
+    "groups":
+    - "name": "k8s.rules"
+      "rules":
+      - "expr": |
+          sum(rate(container_cpu_usage_seconds_total{job="cadvisor", image!="", container_name!=""}[5m])) by (namespace)
+        "record": "namespace:container_cpu_usage_seconds_total:sum_rate"
+    - "name": "kube-scheduler.rules"
+      "rules":
+      - "expr": |
+          histogram_quantile(0.99, sum(rate(scheduler_e2e_scheduling_latency_microseconds_bucket{job="kube-scheduler"}[5m])) without(instance, pod)) / 1e+06
+        "labels":
+          "quantile": "0.99"
+        "record": "cluster_quantile:scheduler_e2e_scheduling_latency:histogram_quantile"
+  prometheus.yaml: |-
+    global:
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      evaluation_interval: 1m
+      external_labels:
+        cluster: kind-one
+    remote_write:
+    - url: http://nginx.monitoring.svc.cluster.local:80/api/prom/push
+    alerting:
+      alertmanagers:
+      - kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - monitoring
+        scheme: http
+        path_prefix: /
+        timeout: 10s
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_label_k8s_app]
+          separator: ;
+          regex: monitoring;alertmanager
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          separator: ;
+          regex: http
+          replacement: $1
+          action: keep
+    rule_files:
+    - /etc/config/rules.yaml
+    - /etc/config/alerts.yaml
+    scrape_configs:
+    - job_name: kubernetes-service-endpoints
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        separator: ;
+        regex: "true"
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        separator: ;
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        separator: ;
+        regex: (https?)
+        target_label: __scheme__
+        replacement: $1
+        action: replace
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        separator: ;
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        target_label: __address__
+        replacement: $1:$2
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: instance
+        replacement: $1
+        action: replace
+    - job_name: kubernetes-services
+      honor_timestamps: true
+      params:
+        module:
+        - http_2xx
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /probe
+      scheme: http
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__address__]
+        separator: ;
+        regex: (.*)
+        target_label: __param_target
+        replacement: $1
+        action: replace
+      - separator: ;
+        regex: (.*)
+        target_label: __address__
+        replacement: blackbox
+        action: replace
+      - source_labels: [__param_target]
+        separator: ;
+        regex: (.*)
+        target_label: instance
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_probe]
+        separator: ;
+        regex: "true"
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+    - job_name: kubernetes-pods
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_pod_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        separator: ;
+        regex: "true"
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        separator: ;
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: $1
+        action: replace
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        separator: ;
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        target_label: __address__
+        replacement: $1:$2
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: instance
+        replacement: $1
+        action: replace
+    - job_name: alertmanager
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__address__]
+        separator: ;
+        regex: ([^:]+)(?::\d+)?
+        target_label: __address__
+        replacement: $1:9093
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_label_k8s_app]
+        separator: ;
+        regex: monitoring;alertmanager
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+    - job_name: apiserver
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      kubernetes_sd_configs:
+      - role: endpoints
+      scheme: https
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+        separator: ;
+        regex: default;kubernetes
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        separator: ;
+        regex: https
+        replacement: $1
+        action: keep
+    - job_name: kube-state-metrics
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_label_k8s_app]
+        separator: ;
+        regex: monitoring;kube-state-metrics
+        replacement: $1
+        action: keep
+    - job_name: node-exporter
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_pod_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__address__]
+        separator: ;
+        regex: ([^:]+)(?::\d+)?
+        target_label: __address__
+        replacement: $1:9100
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_k8s_app]
+        separator: ;
+        regex: monitoring;node-exporter
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        separator: ;
+        regex: (.*)
+        target_label: instance
+        replacement: $1
+        action: replace
+    - job_name: prometheus
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_pod_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__address__]
+        separator: ;
+        regex: ([^:]+)(?::\d+)?
+        target_label: __address__
+        replacement: $1:9090
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_k8s_app]
+        separator: ;
+        regex: monitoring;prometheus
+        replacement: $1
+        action: keep
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        separator: ;
+        regex: (.*)
+        target_label: instance
+        replacement: $1
+        action: replace
+    - job_name: cadvisor
+      honor_labels: true
+      honor_timestamps: true
+      scrape_interval: 30s
+      scrape_timeout: 30s
+      metrics_path: /metrics/cadvisor
+      scheme: https
+      kubernetes_sd_configs:
+      - role: node
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+    - job_name: kubelet
+      honor_labels: true
+      honor_timestamps: true
+      scrape_interval: 30s
+      scrape_timeout: 30s
+      metrics_path: /metrics
+      scheme: https
+      kubernetes_sd_configs:
+      - role: node
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubemon-prometheus
+  labels:
+    k8s-app: prometheus
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: prometheus
+spec:
+  type: NodePort
+  ports:
+    # Exposes `http` and `TCP` ports `9090` using the default `ClusterIP` Service type
+    - name: http
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+      nodePort: 30090
+  sessionAffinity: ClientIP
+  selector:
+    k8s-app: prometheus
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kubemon-prometheus
+  labels: &Labels
+    k8s-app: prometheus
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: prometheus
+spec:
+  serviceName: "kubemon-prometheus"
+  replicas: 1
+  podManagementPolicy: "Parallel"
+  updateStrategy:
+    type: "RollingUpdate"
+  selector:
+    matchLabels: *Labels
+  template:
+    metadata:
+      labels: *Labels
+    spec:
+      serviceAccountName: prometheus
+      # `chown` the Prometheus  `/data` directory so that Prometheus can write to it
+      initContainers:
+      - name: "init-chown-data"
+        image: debian:9
+        imagePullPolicy: Always
+        command: ["chown", "-R", "65534:65534", "/data"]
+        volumeMounts:
+        - name: kubemon-prometheus-data
+          mountPath: /data
+          subPath: ""
+      containers:
+        - name: prometheus-server
+          image: quay.io/prometheus/prometheus:v2.19.1
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --config.file=/etc/config/prometheus.yaml
+            - --storage.tsdb.path=/data
+            - --web.console.libraries=/etc/prometheus/console_libraries
+            - --web.console.templates=/etc/prometheus/consoles
+            - --storage.tsdb.retention.time=2d
+            - --web.enable-lifecycle
+            - --storage.tsdb.no-lockfile
+            - --web.external-url=http://prometheus.apps.cloud-cafe.tk
+            - --web.route-prefix=/
+          ports:
+            - containerPort: 9090
+          # Probe the `/-/ready` and `/-/healthy` endpoints
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          # Based on 10 running nodes with 30 pods each
+          # Resource requests of `200m` of CPU and `1000Mi` of memory
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1000Mi
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: kubemon-prometheus-data
+              mountPath: /data
+              subPath: ""
+      terminationGracePeriodSeconds: 300
+      volumes:
+        # The Prometheus ConfigMap is mounted into the Pods as a volume at `/etc/config`
+        - name: config-volume
+          configMap:
+            name: kubemon-prometheus-config
+        - name: kubemon-prometheus-data
+          emptyDir: {}
