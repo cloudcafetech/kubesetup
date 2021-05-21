@@ -19,7 +19,7 @@ data:
           category: logs
         annotations:
           title: "Application error in logs"
-          messages: "Found error in of POD {{ $labels.pod }} in namespace {{ $labels.namespace }} is above 1 (current value: {{ $value }}%)"
+          messages: "Found error in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
       - alert: NoSuchHostError
         expr: sum by (pod)(count_over_time({pod!=""}|~ "no such host"[1m])) >= 1
         for: 1m
@@ -28,7 +28,7 @@ data:
           category: logs
         annotations:
           title: "No Such Host Error"
-          messages: "No Such Host error found in of POD {{ $labels.pod }} in namespace {{ $labels.namespace }} is above 1 (current value: {{ $value }}%)"
+          messages: "No Such Host error found in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }}%)"
 ---
 apiVersion: v1
 kind: ServiceAccount
