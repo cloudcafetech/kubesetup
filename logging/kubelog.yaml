@@ -1,4 +1,36 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: kubemon-loki-alert-config
+  labels:
+    app.kubernetes.io/name: kubemon
+    app.kubernetes.io/component: prometheus
+data:
+  rules.yml: |-
+    "groups":
+    - name: apps-rules
+      rules:
+      - alert: AppsErrorlog
+        expr: sum by (pod)(count_over_time({pod!=""}|~ "[Ee]rror"[1m])) >= 1
+        for: 1m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          title: "Application error in logs"
+          messages: "Found error in of POD {{ $labels.pod }} in namespace {{ $labels.namespace }} is above 1 (current value: {{ $value }}%)"
+      - alert: NoSuchHostError
+        expr: sum by (pod)(count_over_time({pod!=""}|~ "no such host"[1m])) >= 1
+        for: 1m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          title: "No Such Host Error"
+          messages: "No Such Host error found in of POD {{ $labels.pod }} in namespace {{ $labels.namespace }} is above 1 (current value: {{ $value }}%)"
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
@@ -184,7 +216,7 @@ spec:
       containers:
       - args:
         - -config.file=/etc/loki/loki.yaml
-        image: grafana/loki:v1.3.0
+        image: grafana/loki:2.0.0-amd64
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -219,8 +251,12 @@ spec:
         volumeMounts:
         - mountPath: /etc/loki
           name: config
+        - mountPath: /etc/loki/rules
+          name: alert
         - mountPath: /data
           name: storage
+        - mountPath: /temp
+          name: temp
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -237,15 +273,20 @@ spec:
         secret:
           defaultMode: 420
           secretName: loki
+      - name: alert
+        configMap:
+          name: kubemon-loki-alert-config
       - emptyDir: {}
         name: storage
+      - emptyDir: {}
+        name: temp
   updateStrategy:
     type: RollingUpdate
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  labels:    
+  labels:
     app: loki
   name: loki
 spec:
