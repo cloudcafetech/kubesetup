@@ -660,7 +660,7 @@ metadata:
 ---
 # The ClusterRole grants the Prometheus Service Account permissions to fetch Kubernetes Node information, 
 # as well as information about Services, Endpoints, and Pods in the cluster.
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: prometheus
@@ -1860,6 +1860,13 @@ data:
     - job_name: 'ingress-nginx'
       static_configs:
       - targets: ['ingress-nginx.kube-router.svc.cluster.local:10254']
+    - job_name: cost-model
+      scrape_interval: 1m
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      static_configs:
+      - targets: ['cost-model.monitoring.svc.cluster.local:9003']      
 ---
 kind: Service
 apiVersion: v1
