@@ -704,6 +704,16 @@ data:
   # If you'd like to add your own alerts or modify existing alerts, you can edit this ConfigMap value.
   alerts.yaml: |-
     "groups": 
+    - name: cost-rules
+      rules:
+      - alert: MonthlyAllNodesCost
+        expr: sum(node_total_hourly_cost) * 730 > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          messages: "The monthly cost of all nodes is > $100"
+          severity: warning  
     - name: apps-rules
       rules:
       - alert: JVMThread
