@@ -165,10 +165,19 @@ data:
         Kube_URL       https://kubernetes.default.svc:443
         Merge_Log      On
     [Output]
-        Name           loki
+        Name           grafana-loki
+        Match          *
+        Url            ${LOKI_CEN_URL}
+        Labels         {cluster="kube-one", job="fluent-bit"}
+        RemoveKeys     kubernetes,stream
+        LabelMapPath   /fluent-bit/etc/labelmap.json
+        LineFormat     json
+        LogLevel       warn
+    [Output]
+        Name           grafana-loki
         Match          *
         Url            http://loki:3100/api/prom/push
-        Labels         {cluster="kube-central"}
+        Labels         {cluster="kube-one", job="fluent-bit"}
         RemoveKeys     kubernetes,stream
         LabelMapPath   /fluent-bit/etc/labelmap.json
         LineFormat     json
@@ -334,9 +343,13 @@ spec:
         app: fluent-bit-loki
     spec:
       containers:
-      - image: grafana/fluent-bit-plugin-loki:0.1
+      #- image: grafana/fluent-bit-plugin-loki:0.1
+      - image: grafana/fluent-bit-plugin-loki:latest
         imagePullPolicy: IfNotPresent
         name: fluent-bit-loki
+        env:
+        - name: LOKI_CEN_URL
+          value: "http://loki.172.31.11.185.nip.io/api/prom/push"
         ports:
         - containerPort: 2020
           name: http-metrics
