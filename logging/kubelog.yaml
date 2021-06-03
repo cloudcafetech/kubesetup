@@ -155,7 +155,7 @@ data:
         Name           tail
         Tag            kube.*
         Path           /var/log/containers/*.log
-        Exclude_Path   /var/log/containers/*_monitoring_*.log,/var/log/containers/*_logging_*.log,/var/log/containers/*_kube-system_*.log,/var/log/containers/*_kube-node-lease_*.log,/var/log/containers/*_kube-public_*.log
+        Exclude_Path   /var/log/containers/*_monitoring_*.log,/var/log/containers/*_logging_*.log,/var/log/containers/*_kube-node-lease_*.log,/var/log/containers/*_kube-public_*.log
         Parser         docker
         DB             /run/fluent-bit/flb_kube.db
         Mem_Buf_Limit  5MB
@@ -168,7 +168,7 @@ data:
         Name           loki
         Match          *
         Url            http://loki:3100/api/prom/push
-        Labels         {job="fluent-bit"}
+        Labels         {cluster="kube-central"}
         RemoveKeys     kubernetes,stream
         LabelMapPath   /fluent-bit/etc/labelmap.json
         LineFormat     json
