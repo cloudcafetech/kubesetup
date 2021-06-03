@@ -177,7 +177,7 @@ data:
         Name           grafana-loki
         Match          *
         Url            http://loki:3100/api/prom/push
-        Labels         {cluster="kube-one", job="fluent-bit"}
+        Labels         {job="fluent-bit"}
         RemoveKeys     kubernetes,stream
         LabelMapPath   /fluent-bit/etc/labelmap.json
         LineFormat     json
