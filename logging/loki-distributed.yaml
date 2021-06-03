@@ -3,16 +3,16 @@ kind: ServiceAccount
 metadata:
   labels:
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed
+    app.kubernetes.io/name: loki
+  name: loki
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed
+    app.kubernetes.io/name: loki
+  name: loki
 data:
   config.yaml: |
     auth_enabled: false
@@ -41,7 +41,7 @@ data:
 
     memberlist:
       join_members:
-        - loki-loki-distributed-memberlist
+        - loki-memberlist
 
     limits_config:
       ingestion_rate_mb: 10
@@ -75,7 +75,7 @@ data:
           parallelism: 100
         memcached_client:
           consistent_hash: true
-          host: loki-loki-distributed-memcached-chunks
+          host: loki-memcached-chunks
           service: http
 
     table_manager:
@@ -98,7 +98,7 @@ data:
             validity: 24h
 
     frontend_worker:
-      frontend_address: loki-loki-distributed-query-frontend:9095
+      frontend_address: loki-query-frontend:9095
 
     frontend:
       log_queries_longer_than: 5s
@@ -125,8 +125,8 @@ metadata:
   labels:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-gateway
+    app.kubernetes.io/name: loki
+  name: loki-gateway
 data:
   nginx.conf: |
     worker_processes  5;  ## Default: 1
@@ -163,31 +163,31 @@ data:
         }
 
         location = /api/prom/push {
-          proxy_pass       http://loki-loki-distributed-distributor.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-distributor.default.svc.cluster.local:3100$request_uri;
         }
 
         location = /api/prom/tail {
-          proxy_pass       http://loki-loki-distributed-querier.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-querier.default.svc.cluster.local:3100$request_uri;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
         }
 
         location ~ /api/prom/.* {
-          proxy_pass       http://loki-loki-distributed-query-frontend.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-query-frontend.default.svc.cluster.local:3100$request_uri;
         }
 
         location = /loki/api/v1/push {
-          proxy_pass       http://loki-loki-distributed-distributor.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-distributor.default.svc.cluster.local:3100$request_uri;
         }
 
         location = /loki/api/v1/tail {
-          proxy_pass       http://loki-loki-distributed-querier.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-querier.default.svc.cluster.local:3100$request_uri;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
         }
 
         location ~ /loki/api/.* {
-          proxy_pass       http://loki-loki-distributed-query-frontend.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-query-frontend.default.svc.cluster.local:3100$request_uri;
         }
       }
     }
@@ -198,15 +198,15 @@ metadata:
   labels:
     app.kubernetes.io/component: compactor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-compactor
+    app.kubernetes.io/name: loki
+  name: loki-compactor
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: compactor
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
+      app.kubernetes.io/name: loki
   strategy:
     type: Recreate
   template:
@@ -214,7 +214,7 @@ spec:
       labels:
         app.kubernetes.io/component: compactor
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
     spec:
       containers:
       - args:
@@ -260,13 +260,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
       - emptyDir: {}
         name: data
@@ -277,15 +277,15 @@ metadata:
   labels:
     app.kubernetes.io/component: distributor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-distributor
+    app.kubernetes.io/name: loki
+  name: loki-distributor
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: distributor
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
+      app.kubernetes.io/name: loki
   strategy:
     rollingUpdate:
       maxSurge: 0
@@ -296,7 +296,7 @@ spec:
       labels:
         app.kubernetes.io/component: distributor
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
         app.kubernetes.io/part-of: memberlist
     spec:
       affinity:
@@ -307,7 +307,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: distributor
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -315,7 +315,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: distributor
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -364,13 +364,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
 ---
 apiVersion: apps/v1
@@ -379,15 +379,15 @@ metadata:
   labels:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-gateway
+    app.kubernetes.io/name: loki
+  name: loki-gateway
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: gateway
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
+      app.kubernetes.io/name: loki
   strategy:
     rollingUpdate:
       maxSurge: 0
@@ -398,7 +398,7 @@ spec:
       labels:
         app.kubernetes.io/component: gateway
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
     spec:
       affinity:
         podAntiAffinity:
@@ -408,7 +408,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: gateway
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -416,7 +416,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: gateway
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - image: docker.io/nginxinc/nginx-unprivileged:1.19-alpine
@@ -460,13 +460,13 @@ spec:
         runAsGroup: 101
         runAsNonRoot: true
         runAsUser: 101
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed-gateway
+          name: loki-gateway
         name: config
       - emptyDir: {}
         name: tmp
@@ -479,15 +479,15 @@ metadata:
   labels:
     app.kubernetes.io/component: query-frontend
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-query-frontend
+    app.kubernetes.io/name: loki
+  name: loki-query-frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: query-frontend
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
+      app.kubernetes.io/name: loki
   strategy:
     rollingUpdate:
       maxSurge: 0
@@ -498,7 +498,7 @@ spec:
       labels:
         app.kubernetes.io/component: query-frontend
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
     spec:
       affinity:
         podAntiAffinity:
@@ -508,7 +508,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: query-frontend
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -516,7 +516,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: query-frontend
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -552,13 +552,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
 ---
 apiVersion: apps/v1
@@ -567,16 +567,16 @@ metadata:
   labels:
     app.kubernetes.io/component: ruler
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
     app.kubernetes.io/part-of: memberlist
-  name: loki-loki-distributed-ruler
+  name: loki-ruler
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: ruler
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
+      app.kubernetes.io/name: loki
   strategy:
     rollingUpdate:
       maxSurge: 0
@@ -587,7 +587,7 @@ spec:
       labels:
         app.kubernetes.io/component: ruler
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
         app.kubernetes.io/part-of: memberlist
     spec:
       affinity:
@@ -598,7 +598,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: ruler
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -606,7 +606,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: ruler
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -656,13 +656,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
       - emptyDir: {}
         name: tmp
@@ -675,23 +675,23 @@ metadata:
   labels:
     app.kubernetes.io/component: ingester
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
     app.kubernetes.io/part-of: memberlist
-  name: loki-loki-distributed-ingester
+  name: loki-ingester
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: ingester
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
-  serviceName: loki-loki-distributed-ingester-headless
+      app.kubernetes.io/name: loki
+  serviceName: loki-ingester-headless
   template:
     metadata:
       labels:
         app.kubernetes.io/component: ingester
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
         app.kubernetes.io/part-of: memberlist
     spec:
       affinity:
@@ -702,7 +702,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: ingester
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -710,7 +710,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: ingester
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -761,13 +761,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
       - emptyDir: {}
         name: data
@@ -782,22 +782,22 @@ metadata:
   labels:
     app.kubernetes.io/component: memcached-chunks
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-memcached-chunks
+    app.kubernetes.io/name: loki
+  name: loki-memcached-chunks
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: memcached-chunks
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
-  serviceName: loki-loki-distributed-memcached-chunks
+      app.kubernetes.io/name: loki
+  serviceName: loki-memcached-chunks
   template:
     metadata:
       labels:
         app.kubernetes.io/component: memcached-chunks
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
     spec:
       affinity:
         podAntiAffinity:
@@ -807,7 +807,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: memcached-chunks
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -815,7 +815,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: memcached-chunks
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - image: docker.io/memcached:1.6.7-alpine
@@ -850,8 +850,8 @@ spec:
         runAsGroup: 11211
         runAsNonRoot: true
         runAsUser: 11211
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
   updateStrategy:
     rollingUpdate:
@@ -864,23 +864,23 @@ metadata:
   labels:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
     app.kubernetes.io/part-of: memberlist
-  name: loki-loki-distributed-querier
+  name: loki-querier
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/component: querier
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/name: loki-distributed
-  serviceName: loki-loki-distributed-querier-headless
+      app.kubernetes.io/name: loki
+  serviceName: loki-querier-headless
   template:
     metadata:
       labels:
         app.kubernetes.io/component: querier
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/name: loki-distributed
+        app.kubernetes.io/name: loki
         app.kubernetes.io/part-of: memberlist
     spec:
       affinity:
@@ -891,7 +891,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: querier
                   app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki-distributed
+                  app.kubernetes.io/name: loki
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -899,7 +899,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: querier
                 app.kubernetes.io/instance: loki
-                app.kubernetes.io/name: loki-distributed
+                app.kubernetes.io/name: loki
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -950,13 +950,13 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccount: loki-loki-distributed
-      serviceAccountName: loki-loki-distributed
+      serviceAccount: loki
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           defaultMode: 420
-          name: loki-loki-distributed
+          name: loki
         name: config
       - emptyDir: {}
         name: data
@@ -971,8 +971,8 @@ metadata:
   labels:
     app.kubernetes.io/component: compactor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-compactor
+    app.kubernetes.io/name: loki
+  name: loki-compactor
 spec:
   ports:
   - name: http
@@ -982,7 +982,7 @@ spec:
   selector:
     app.kubernetes.io/component: compactor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -992,8 +992,8 @@ metadata:
   labels:
     app.kubernetes.io/component: distributor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-distributor
+    app.kubernetes.io/name: loki
+  name: loki-distributor
 spec:
   ports:
   - name: http
@@ -1007,7 +1007,7 @@ spec:
   selector:
     app.kubernetes.io/component: distributor
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1017,8 +1017,8 @@ metadata:
   labels:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-gateway
+    app.kubernetes.io/name: loki
+  name: loki-gateway
 spec:
   ports:
   - name: http
@@ -1028,7 +1028,7 @@ spec:
   selector:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1038,8 +1038,8 @@ metadata:
   labels:
     app.kubernetes.io/component: ingester
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-ingester
+    app.kubernetes.io/name: loki
+  name: loki-ingester
 spec:
   ports:
   - name: http
@@ -1053,7 +1053,7 @@ spec:
   selector:
     app.kubernetes.io/component: ingester
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1063,8 +1063,8 @@ metadata:
   labels:
     app.kubernetes.io/component: ingester
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-ingester-headless
+    app.kubernetes.io/name: loki
+  name: loki-ingester-headless
 spec:
   clusterIP: None
   clusterIPs:
@@ -1081,7 +1081,7 @@ spec:
   selector:
     app.kubernetes.io/component: ingester
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1090,8 +1090,8 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-memberlist
+    app.kubernetes.io/name: loki
+  name: loki-memberlist
 spec:
   clusterIP: None
   clusterIPs:
@@ -1103,7 +1103,7 @@ spec:
     targetPort: http-memberlist
   selector:
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
     app.kubernetes.io/part-of: memberlist
   sessionAffinity: None
   type: ClusterIP
@@ -1114,8 +1114,8 @@ metadata:
   labels:
     app.kubernetes.io/component: memcached-chunks
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-memcached-chunks
+    app.kubernetes.io/name: loki
+  name: loki-memcached-chunks
 spec:
   clusterIP: None
   clusterIPs:
@@ -1132,7 +1132,7 @@ spec:
   selector:
     app.kubernetes.io/component: memcached-chunks
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1142,8 +1142,8 @@ metadata:
   labels:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-querier
+    app.kubernetes.io/name: loki
+  name: loki-querier
 spec:
   ports:
   - name: http
@@ -1157,7 +1157,7 @@ spec:
   selector:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1167,8 +1167,8 @@ metadata:
   labels:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-querier-headless
+    app.kubernetes.io/name: loki
+  name: loki-querier-headless
 spec:
   clusterIP: None
   clusterIPs:
@@ -1185,7 +1185,7 @@ spec:
   selector:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1195,8 +1195,8 @@ metadata:
   labels:
     app.kubernetes.io/component: query-frontend
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-query-frontend
+    app.kubernetes.io/name: loki
+  name: loki-query-frontend
 spec:
   clusterIP: None
   clusterIPs:
@@ -1213,7 +1213,7 @@ spec:
   selector:
     app.kubernetes.io/component: query-frontend
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -1223,8 +1223,8 @@ metadata:
   labels:
     app.kubernetes.io/component: ruler
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
-  name: loki-loki-distributed-ruler
+    app.kubernetes.io/name: loki
+  name: loki-ruler
 spec:
   clusterIP: None
   clusterIPs:
@@ -1241,6 +1241,6 @@ spec:
   selector:
     app.kubernetes.io/component: ruler
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/name: loki-distributed
+    app.kubernetes.io/name: loki
   sessionAffinity: None
   type: ClusterIP
