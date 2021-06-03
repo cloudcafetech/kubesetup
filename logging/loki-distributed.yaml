@@ -163,31 +163,31 @@ data:
         }
 
         location = /api/prom/push {
-          proxy_pass       http://loki-distributor.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-distributor.logging.svc.cluster.local:3100$request_uri;
         }
 
         location = /api/prom/tail {
-          proxy_pass       http://loki-querier.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-querier.logging.svc.cluster.local:3100$request_uri;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
         }
 
         location ~ /api/prom/.* {
-          proxy_pass       http://loki-query-frontend.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-query-frontend.logging.svc.cluster.local:3100$request_uri;
         }
 
         location = /loki/api/v1/push {
-          proxy_pass       http://loki-distributor.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-distributor.logging.svc.cluster.local:3100$request_uri;
         }
 
         location = /loki/api/v1/tail {
-          proxy_pass       http://loki-querier.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-querier.logging.svc.cluster.local:3100$request_uri;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
         }
 
         location ~ /loki/api/.* {
-          proxy_pass       http://loki-query-frontend.default.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki-query-frontend.logging.svc.cluster.local:3100$request_uri;
         }
       }
     }
