@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-alert-config
+  labels:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/component: loki
+data:
+  rules.yml: |-
+    "groups":
+    - name: apps-rules
+      rules:
+      - alert: AppsErrorlog
+        expr: sum by (pod,namespace)(count_over_time({pod!=""}|~ "[Ee]rror"[1m])) >= 1
+        for: 1m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          title: "Application error in logs"
+          messages: "Found error in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
+      - alert: NoSuchHostError
+        expr: sum by (pod,namespace)(count_over_time({pod!=""}|~ "no such host"[1m])) >= 1
+        for: 1m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          title: "No Such Host Error"
+          messages: "No Such Host error found in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
+      - alert: HighPercentageError
+        expr: sum(rate({app="foo", env="production"} |= "error" [5m])) by (job) / sum(rate({app="foo", env="production"}[5m])) by (job) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          message: "High error rate"
+      - alert: HighThroughputLogStreams
+        expr: sum by(container) (rate({job=~"loki-dev/.*"}[1m])) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          message: "High Throughput Log Streams"
+      - alert: http-credentials-leaked
+        expr: 'sum by (cluster, job, pod) (count_over_time({namespace="prod"} |~ "http(s?)://(\\w+):(\\w+)@" [5m]) > 0)'
+        for: 10m
+        labels:
+          severity: critical
+          category: logs
+        annotations:
+          message: "{{ $labels.job }} is leaking http basic auth credentials."
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/part-of: memberlist
+  name: loki-ruler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ruler
+      app.kubernetes.io/instance: loki
+      app.kubernetes.io/name: loki
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: ruler
+        app.kubernetes.io/instance: loki
+        app.kubernetes.io/name: loki
+        app.kubernetes.io/part-of: memberlist
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: ruler
+                  app.kubernetes.io/instance: loki
+                  app.kubernetes.io/name: loki
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+            weight: 100
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: ruler
+                app.kubernetes.io/instance: loki
+                app.kubernetes.io/name: loki
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - -config.file=/etc/loki/config/config.yaml
+        - -target=ruler
+        image: docker.io/grafana/loki:2.2.1
+        imagePullPolicy: IfNotPresent
+        name: loki
+        ports:
+        - containerPort: 3100
+          name: http
+          protocol: TCP
+        - containerPort: 9095
+          name: grpc
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/loki/config
+          name: config
+        - mountPath: /etc/loki/rules
+          name: alert
+        - mountPath: /var/loki
+          name: storage
+        - mountPath: /temp
+          name: temp
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      serviceAccount: loki
+      serviceAccountName: loki
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: loki
+        name: config
+      - configMap:
+          name: loki-alert-config
+        name: alert
+      - emptyDir: {}
+        name: temp
+      - emptyDir: {}
+        name: storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/name: loki
+  name: loki-ruler
+spec:
+  clusterIP: None
+  clusterIPs:
+  - None
+  ports:
+  - name: http
+    port: 3100
+    protocol: TCP
+    targetPort: http
+  - name: grpc
+    port: 9095
+    protocol: TCP
+    targetPort: grpc
+  selector:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/name: loki
+  sessionAffinity: None
+  type: ClusterIP
