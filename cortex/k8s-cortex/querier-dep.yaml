@@ -21,7 +21,7 @@ spec:
         - -target=querier
         - -server.http-listen-port=80
         - -consul.hostname=consul.monitoring.svc.cluster.local:8500
-        - -s3.url=s3://admin:admin2675@172.31.14.138:9000/cortex
+        - -s3.url=s3://admin:admin2675@172.31.14.138:9000/monitoring
         - -s3.force-path-style=true
         - -dynamodb.url=dynamodb://user:pass@dynamodb.monitoring.svc.cluster.local:8000
         - -schema-config-file=/etc/cortex/schema.yaml
