@@ -4,7 +4,7 @@ metadata:
   name: cortex-ruler-configmap
   namespace: monitoring
 data:
-  ruler.yml: |-
+  rules.yml: |-
     groups:
       - name: "centralmonitoring"
         rules:
@@ -65,8 +65,8 @@ spec:
           name: config
         - mountPath: /etc/cortex/rules
           name: alert
-        - mountPath: /temp
-          name: temp
+        - mountPath: /rules
+          name: rules
       volumes:
         - configMap:
             name: schema-config
@@ -75,4 +75,4 @@ spec:
             name: cortex-ruler-configmap
           name: alert
         - emptyDir: {}
-          name: temp
+          name: rules
