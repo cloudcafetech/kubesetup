@@ -129,7 +129,7 @@ spec:
                 apiVersion: v1
                 fieldPath: status.podIP
           ports:
-             - containerPort: 9093
+            - containerPort: 9093
               name: http
             - containerPort: 6783
               name: mesh
