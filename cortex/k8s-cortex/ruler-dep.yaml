@@ -46,7 +46,7 @@ spec:
         - -log.level=debug
         - -server.http-listen-port=80
         - -ruler.configs.url=http://configs.monitoring.svc.cluster.local:80
-        - -ruler.alertmanager-url=http://alertmanager.monitoring.svc.cluster.local/alertmanager/
+        - -ruler.alertmanager-url=http://alertmanager.monitoring.svc.cluster.local:9093
         - -ruler-storage.backend=local
         - -ruler-storage.local.directory=/etc/cortex/rules
         - -consul.hostname=consul.monitoring.svc.cluster.local:8500
