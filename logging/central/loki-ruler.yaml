@@ -11,23 +11,23 @@ data:
     - name: apps-rules
       rules:
       - alert: AppsErrorlog
-        expr: sum by (pod,namespace)(count_over_time({pod!=""}|~ "[Ee]rror"[1m])) >= 1
+        expr: sum by (cluster,instance,namespace)(count_over_time({instance!=""}|~ "[Ee]rror"[1h])) >= 1
         for: 1m
         labels:
           severity: warning
           category: logs
         annotations:
           title: "Application error in logs"
-          messages: "Found error in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
+          messages: "Found error in Cluster ({{ $labels.cluster }}) POD ({{ $labels.instance }}) in Namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
       - alert: NoSuchHostError
-        expr: sum by (pod,namespace)(count_over_time({pod!=""}|~ "no such host"[1m])) >= 1
+        expr: sum by (cluster,instance,namespace)(count_over_time({instance!=""}|~ "no such host"[30m])) >= 1
         for: 1m
         labels:
           severity: warning
           category: logs
         annotations:
           title: "No Such Host Error"
-          messages: "No Such Host error found in POD ({{ $labels.pod }}) in namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
+          messages: "No Such Host error found in Cluster ({{ $labels.cluster }}) POD ({{ $labels.instance }}) in Namespace ({{ $labels.namespace }}) is above 1 (current value: {{ $value }})"
       - alert: HighPercentageError
         expr: sum(rate({app="foo", env="production"} |= "error" [5m])) by (job) / sum(rate({app="foo", env="production"}[5m])) by (job) > 0.05
         for: 10m
@@ -140,7 +140,7 @@ spec:
           name: alert
         - mountPath: /var/loki
           name: storage
-        - mountPath: /temp
+        - mountPath: /temp/loki/rules-temp
           name: temp
       dnsPolicy: ClusterFirst
       restartPolicy: Always
