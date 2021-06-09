@@ -23,7 +23,7 @@ data:
           kvstore:
             store: memberlist
           replication_factor: 1
-      chunk_idle_period: 10m
+      chunk_idle_period: 5m
       chunk_block_size: 262144
       chunk_encoding: snappy
       chunk_retain_period: 1m
