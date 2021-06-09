@@ -104,7 +104,8 @@ spec:
       - args:
         - -config.file=/etc/loki/config/config.yaml
         - -target=ruler
-        image: docker.io/grafana/loki:2.2.1
+        #image: docker.io/grafana/loki:2.2.1
+        image: grafana/loki:2.0.0-amd64        
         imagePullPolicy: IfNotPresent
         name: loki
         ports:
