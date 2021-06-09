@@ -26,7 +26,7 @@ spec:
         - -dynamodb.url=dynamodb://user:pass@dynamodb.monitoring.svc.cluster.local:8000
         - -schema-config-file=/etc/cortex/schema.yaml
         - -querier.frontend-address=query-frontend.monitoring.svc.cluster.local:9095
-        - -store.chunks-cache.memcached.hostname=memcached.monitoring.svc.cluster.local
+        - -store.chunks-cache.memcached.addresses=memcached.monitoring.svc.cluster.local:11211
         - -store.chunks-cache.memcached.timeout=100ms
         - -store.chunks-cache.memcached.service=memcached
         - -distributor.replication-factor=1
