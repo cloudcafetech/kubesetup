@@ -138,7 +138,7 @@ e_*.log,/var/log/containers/*_kube-public_*.log
     [Output]
         Name           grafana-loki
         Match          *
-        Url            http://loki-distributor:3100/api/prom/push
+        Url            http://loki:3100/api/prom/push
         Labels         {job="fluent-bit"}
         RemoveKeys     kubernetes,stream
         LabelMapPath   /fluent-bit/etc/labelmap.json
