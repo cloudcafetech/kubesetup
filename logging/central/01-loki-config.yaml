@@ -114,7 +114,7 @@ data:
         kvstore:
           store: memberlist
       rule_path: /temp/loki/rules-temp
-      alertmanager_url: http://kubemon-alertmanager.monitoring.svc.cluster.local:9093
+      alertmanager_url: http://alertmanager.monitoring.svc.cluster.local:9093
       external_url: https://alertmanager.xx
       enable_api: true
       enable_alertmanager_v2: true
