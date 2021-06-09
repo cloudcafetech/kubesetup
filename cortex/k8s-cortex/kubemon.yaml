@@ -59,10 +59,9 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubemon-kube-state-metrics
+  name: kube-state-metrics
   labels:
     k8s-app: kube-state-metrics
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: kube-state-metrics
 spec:
   selector:
@@ -80,13 +79,10 @@ spec:
         image: quay.io/coreos/kube-state-metrics:v1.9.6
         imagePullPolicy: Always
         ports:
-        # `8080` is used to scrape Kubernetes object state metrics
         - name: http-metrics
           containerPort: 8080
-        # `8081` to scrape its own general process metrics
         - name: telemetry
           containerPort: 8081
-        # A readiness probe is configured to hit `/healthz` at `8080`
         readinessProbe:
           httpGet:
             path: /healthz
@@ -119,19 +115,17 @@ spec:
           - --memory=100Mi
           - --extra-memory=2Mi
           - --threshold=5
-          - --deployment=kubemon-kube-state-metrics
+          - --deployment=kube-state-metrics
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubemon-kube-state-metrics
+  name: kube-state-metrics
   labels:
     k8s-app: kube-state-metrics
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: kube-state-metrics
 spec:
   ports:
-  # Exposed using the default ClusterIP service type
   - name: http-metrics
     port: 8080
     targetPort: http-metrics
@@ -151,10 +145,9 @@ metadata:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: kubemon-node-exporter
+  name: node-exporter
   labels:
     k8s-app: node-exporter
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: node-exporter
 spec:
   updateStrategy:
@@ -176,7 +169,6 @@ spec:
             - --path.procfs=/host/proc
             - --path.sysfs=/host/sys
           ports:
-            # Expose metrics for scraping on port `9100`
             - name: metrics
               containerPort: 9100
               hostPort: 9100
@@ -187,7 +179,6 @@ spec:
             - name: sys
               mountPath: /host/sys
               readOnly: true
-          # Resource limits and requests of `10m` of CPU and `50Mi` of memory
           resources:
             limits:
               cpu: 10m
@@ -246,12 +237,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: kubemon-prometheus-config
+  name: prometheus-config
   labels:
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: prometheus
 data:
-  # If you'd like to add your own alerts or modify existing alerts, you can edit this ConfigMap value.
   alerts.yaml: |-
     "groups":
     - name: apps-rules
@@ -664,15 +653,13 @@ data:
 kind: Service
 apiVersion: v1
 metadata:
-  name: kubemon-prometheus
+  name: prometheus
   labels:
     k8s-app: prometheus
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: prometheus
 spec:
   type: NodePort
   ports:
-    # Exposes `http` and `TCP` ports `9090` using the default `ClusterIP` Service type
     - name: http
       port: 9090
       protocol: TCP
@@ -685,13 +672,12 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: kubemon-prometheus
+  name: prometheus
   labels: &Labels
     k8s-app: prometheus
-    app.kubernetes.io/name: kubemon
     app.kubernetes.io/component: prometheus
 spec:
-  serviceName: "kubemon-prometheus"
+  serviceName: "prometheus"
   replicas: 1
   podManagementPolicy: "Parallel"
   updateStrategy:
@@ -703,14 +689,13 @@ spec:
       labels: *Labels
     spec:
       serviceAccountName: prometheus
-      # `chown` the Prometheus  `/data` directory so that Prometheus can write to it
       initContainers:
       - name: "init-chown-data"
         image: debian:9
         imagePullPolicy: Always
         command: ["chown", "-R", "65534:65534", "/data"]
         volumeMounts:
-        - name: kubemon-prometheus-data
+        - name: prometheus-data
           mountPath: /data
           subPath: ""
       containers:
@@ -729,7 +714,6 @@ spec:
             - --web.route-prefix=/
           ports:
             - containerPort: 9090
-          # Probe the `/-/ready` and `/-/healthy` endpoints
           readinessProbe:
             httpGet:
               path: /-/ready
@@ -742,8 +726,6 @@ spec:
               port: 9090
             initialDelaySeconds: 30
             timeoutSeconds: 30
-          # Based on 10 running nodes with 30 pods each
-          # Resource requests of `200m` of CPU and `1000Mi` of memory
           resources:
             requests:
               cpu: 200m
@@ -751,14 +733,13 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
-            - name: kubemon-prometheus-data
+            - name: prometheus-data
               mountPath: /data
               subPath: ""
       terminationGracePeriodSeconds: 300
       volumes:
-        # The Prometheus ConfigMap is mounted into the Pods as a volume at `/etc/config`
         - name: config-volume
           configMap:
-            name: kubemon-prometheus-config
-        - name: kubemon-prometheus-data
+            name: prometheus-config
+        - name: prometheus-data
           emptyDir: {}
