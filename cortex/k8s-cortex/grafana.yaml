@@ -65,7 +65,7 @@ data:
               url: "$${__value.raw}"
       name: Loki
       type: loki
-      url: http://loki.logging:3100
+      url: http://loki-querier.logging:3100
     - access: proxy
       isDefault: true
       name: prometheus
