@@ -54,7 +54,7 @@ data:
       #filesystem:
         #directory: /var/loki/chunks
       aws:
-        s3: s3://admin:admin2675@172.31.24.213:9000/logging
+        s3: s3://admin:admin2675@172.31.14.138:9000/logging
         s3forcepathstyle: true
       boltdb_shipper:
         active_index_directory: /var/loki/index
