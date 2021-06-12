@@ -50,7 +50,7 @@ data:
           schema: v11
           index:
             prefix: loki_index_
-            period: 168h
+            period: 24h
 
     storage_config:
       # Enable for local filesystem
