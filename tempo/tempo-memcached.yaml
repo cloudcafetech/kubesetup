@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/component: memcached
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  name: tempo-memcached
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: memcached
+      app.kubernetes.io/instance: tempo
+      app.kubernetes.io/name: tempo
+  serviceName: memcached
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: memcached
+        app.kubernetes.io/instance: tempo
+        app.kubernetes.io/name: tempo
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: memcached
+                  app.kubernetes.io/instance: tempo
+                  app.kubernetes.io/name: tempo
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+            weight: 100
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: memcached
+                app.kubernetes.io/instance: tempo
+                app.kubernetes.io/name: tempo
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - image: memcached:1.5.17-alpine
+        imagePullPolicy: IfNotPresent
+        name: memcached
+        ports:
+        - containerPort: 11211
+          name: client
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: tempo
+      serviceAccountName: tempo
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: memcached
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  name: tempo-memcached
+spec:
+  ports:
+  - name: memcached-client
+    port: 11211
+    protocol: TCP
+    targetPort: 11211
+  - name: http-metrics
+    port: 9150
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app.kubernetes.io/component: memcached
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  sessionAffinity: None
+  type: ClusterIP

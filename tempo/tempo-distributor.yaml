@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  name: tempo-distributor
+spec:
+  minReadySeconds: 10
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: distributor
+      app.kubernetes.io/instance: tempo
+      app.kubernetes.io/name: tempo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: distributor
+        app.kubernetes.io/instance: tempo
+        app.kubernetes.io/name: tempo-distributed
+        tempo-gossip-member: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: distributor
+                  app.kubernetes.io/instance: tempo
+                  app.kubernetes.io/name: tempo-distributed
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+            weight: 100
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: distributor
+                app.kubernetes.io/instance: tempo
+                app.kubernetes.io/name: tempo-distributed
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - -target=distributor
+        - -config.file=/conf/tempo.yaml
+        - -mem-ballast-size-mbs=1024
+        image: docker.io/grafana/tempo:1.0.0
+        imagePullPolicy: IfNotPresent
+        name: distributor
+        ports:
+        - containerPort: 7946
+          name: http-memberlist
+          protocol: TCP
+        - containerPort: 3100
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: tempo-conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: tempo
+      serviceAccountName: tempo
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: tempo
+        name: tempo-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  name: tempo-distributor
+spec:
+  ports:
+  - name: http
+    port: 3100
+    protocol: TCP
+    targetPort: http
+  - name: grpc
+    port: 9095
+    protocol: TCP
+    targetPort: 9095
+  selector:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  sessionAffinity: None
+  type: ClusterIP
