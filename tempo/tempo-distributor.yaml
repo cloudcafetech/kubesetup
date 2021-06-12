@@ -25,7 +25,7 @@ spec:
       labels:
         app.kubernetes.io/component: distributor
         app.kubernetes.io/instance: tempo
-        app.kubernetes.io/name: tempo-distributed
+        app.kubernetes.io/name: tempo
         tempo-gossip-member: "true"
     spec:
       affinity:
@@ -36,7 +36,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/component: distributor
                   app.kubernetes.io/instance: tempo
-                  app.kubernetes.io/name: tempo-distributed
+                  app.kubernetes.io/name: tempo
               topologyKey: failure-domain.beta.kubernetes.io/zone
             weight: 100
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -44,7 +44,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/component: distributor
                 app.kubernetes.io/instance: tempo
-                app.kubernetes.io/name: tempo-distributed
+                app.kubernetes.io/name: tempo
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
