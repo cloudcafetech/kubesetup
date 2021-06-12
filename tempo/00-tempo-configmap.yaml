@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: distributor
     app.kubernetes.io/instance: tempo
     app.kubernetes.io/name: tempo
-  name: tempo-tempo-distributed
+  name: tempo
 data:
   overrides.yaml: |
     overrides: {}
