@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/instance: tempo
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: tempo
   name: tempo-querier
 spec:
@@ -83,7 +82,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-6-12T16:17:33Z"
   labels:
     app.kubernetes.io/component: querier
     app.kubernetes.io/instance: tempo
