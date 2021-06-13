@@ -53,13 +53,20 @@ data:
       type: jaeger
       uid: jaeger
       url: http://simplest-query.tracing:16686
+    - access: browser
+      editable: false
+      isDefault: false
+      name: Tempo
+      type: tempo
+      uid: tempo
+      url: http://tempo-query-frontend.tracing:3100 
     - access: proxy
       editable: false
       isDefault: false
       jsonData:
           maxLines: 1000
           derivedFields:
-            - datasourceUid: jaeger
+            - datasourceUid: tempo
               matcherRegex: '"(?:traceID|trace_id|TraceId)": "(\w+)"'
               name: TraceID
               url: "$${__value.raw}"
