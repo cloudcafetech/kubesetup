@@ -61,6 +61,30 @@ spec:
         - containerPort: 3100
           name: http
           protocol: TCP
+        - containerPort: 6831
+          name: jaeger-compact
+          protocol: UDP
+        - containerPort: 6832
+          name: jaeger-binary
+          protocol: UDP
+        - containerPort: 14268
+          name: jaeger-http
+          protocol: TCP
+        - containerPort: 14250
+          name: jaeger-grpc
+          protocol: TCP
+        - containerPort: 9411
+          name: zipkin
+          protocol: TCP
+        - containerPort: 55681
+          name: otlp-http
+          protocol: TCP
+        - containerPort: 4317
+          name: otlp-grpc
+          protocol: TCP
+        - containerPort: 55678
+          name: opencensus
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
