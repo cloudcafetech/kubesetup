@@ -132,6 +132,42 @@ spec:
     port: 9095
     protocol: TCP
     targetPort: 9095
+  - name: jaeger-thrift-compact
+    port: 6831
+    protocol: UDP
+    targetPort: jaeger-compact
+  - name: jaeger-thrift-binary
+    port: 6832
+    protocol: UDP
+    targetPort: jaeger-binary
+  - name: jaeger-thrift-http
+    port: 14268
+    protocol: TCP
+    targetPort: jaeger-http
+  - name: jaeger-grpc
+    port: 14250
+    protocol: TCP
+    targetPort: jaeger-grpc
+  - name: zipkin
+    port: 9411
+    protocol: TCP
+    targetPort: zipkin
+  - name: otlp-http
+    port: 55681
+    protocol: TCP
+    targetPort: otlp-http
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+    targetPort: otlp-grpc
+  - name: otlp-legacy
+    port: 55680
+    protocol: TCP
+    targetPort: otlp-grpc
+  - name: opencensus
+    port: 55678
+    protocol: TCP
+    targetPort: opencensus
   selector:
     app.kubernetes.io/component: distributor
     app.kubernetes.io/instance: tempo
