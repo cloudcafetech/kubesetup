@@ -24,6 +24,26 @@ data:
         kvstore:
           store: memberlist
       receivers:
+        jaeger:
+          protocols:
+            thrift_compact:
+              endpoint: 0.0.0.0:6831
+            thrift_binary:
+              endpoint: 0.0.0.0:6832
+            thrift_http:
+              endpoint: 0.0.0.0:14268
+            grpc:
+              endpoint: 0.0.0.0:14250
+        zipkin:
+          endpoint: 0.0.0.0:9411
+        otlp:
+          protocols:
+            http:
+              endpoint: 0.0.0.0:55681
+            grpc:
+              endpoint: 0.0.0.0:4317
+        opencensus:
+          endpoint: 0.0.0.0:55678      
     querier:
       frontend_worker:
         frontend_address: tempo-query-frontend-discovery:9095
