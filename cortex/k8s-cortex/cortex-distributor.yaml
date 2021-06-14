@@ -25,3 +25,14 @@ spec:
         - -distributor.replication-factor=1
         ports:
         - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: distributor
+spec:
+  ports:
+    - port: 80
+  selector:
+    name: distributor
+    
