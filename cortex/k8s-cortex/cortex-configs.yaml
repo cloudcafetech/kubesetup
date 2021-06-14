@@ -24,3 +24,14 @@ spec:
         - -configs.database.migrations-dir=/migrations
         ports:
         - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configs
+spec:
+  ports:
+    - port: 80
+  selector:
+    name: configs
+    
