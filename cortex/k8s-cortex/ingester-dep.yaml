@@ -66,3 +66,14 @@ spec:
         - name: config-volume
           configMap:
             name: schema-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingester
+spec:
+  ports:
+    - port: 80
+  selector:
+    name: ingester
+    
