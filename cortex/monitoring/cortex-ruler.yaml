@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cortex-ruler-configmap
+  namespace: monitoring
+data:
+  rules.yml: |-
+    groups:
+      - name: "centralmonitoring"
+        rules:
+          - alert: "PrometheusDown"
+            annotations:
+              message: Prometheus replica in cluster {{$labels.cluster}} has disappeared.
+            expr: sum(up{cluster!="", instance=~"prometheus.*", job="kubernetes-service-endpoints"}) by (cluster) < 3
+            for: 15s
+            labels:
+              severity: critical
+              category: metrics
+          - alert: "TooManyPods"
+            annotations:
+              message: Too many pods in cluster {{$labels.cluster}} on node {{$labels.instance}}
+            expr: sum by(cluster,instance) (kubelet_running_pods{cluster!="",instance!=""}) > 5
+            for: 15s
+            labels:
+              severity: warning
+              category: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+    app.kubernetes.io/part-of: memberlist
+  name: cortex-ruler
+  namespace: monitoring
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ruler
+      app.kubernetes.io/instance: cortex
+      app.kubernetes.io/name: cortex
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      annotations:
+        prometheus.io/port: http-metrics
+        prometheus.io/scrape: ""
+      labels:
+        app.kubernetes.io/component: ruler
+        app.kubernetes.io/instance: cortex
+        app.kubernetes.io/name: cortex
+        app.kubernetes.io/part-of: memberlist
+    spec:
+      affinity: {}
+      containers:
+      - args:
+        - -target=ruler
+        - -config.file=/etc/cortex/cortex.yaml
+        - -s3.url=s3://admin:admin2675@172.31.14.138:9000/monitoring
+        - -s3.force-path-style=true
+        - -store.chunks-cache.memcached.addresses=dns+memcached.monitoring.svc.cluster.local:11211
+        image: quay.io/cortexproject/cortex:v1.9.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: cortex
+        ports:
+        - containerPort: 8080
+          name: http-metrics
+          protocol: TCP
+        - containerPort: 7946
+          name: gossip
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/cortex
+          name: config
+        - mountPath: /data
+          name: storage
+        - mountPath: /rules
+          name: tmp
+        - mountPath: /etc/cortex/rules/fake
+          name: alert
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: cortex
+      serviceAccountName: cortex
+      terminationGracePeriodSeconds: 180
+      volumes:
+      - name: config
+        configMap:
+          name: cortex
+      - emptyDir: {}
+        name: tmp
+      - emptyDir: {}
+        name: storage
+      - configMap:
+          defaultMode: 420
+          name: cortex-ruler-configmap
+        name: alert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+  name: cortex-ruler
+  namespace: monitoring
+spec:
+  clusterIP: 
+  clusterIPs:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app.kubernetes.io/component: ruler
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+  sessionAffinity: None
+  type: ClusterIP

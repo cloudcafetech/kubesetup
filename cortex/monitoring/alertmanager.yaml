@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  labels:
+    app.kubernetes.io/component: alertmanager
+data:
+  alertmanager.yml: |-
+    global: 
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'ttttttttt@gmail.com'
+      smtp_auth_username: 'ttttttttt@gmail.com'
+      smtp_auth_password: 'XXXXXXXX'
+      resolve_timeout: 5m
+    route:
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 3h
+      receiver: default-receiver
+      routes:
+      - match:
+          severity: restartpod
+        receiver: email-pod-restart
+      - match:
+          severity: scalepod
+        receiver: email-pod-scale
+    receivers:
+    - name: default-receiver 
+      email_configs:
+      - to: 'mymailid@test.com'
+        send_resolved: true
+      webhook_configs:
+      - url: http://automate-service.automate.svc.cluster.local:9000/hooks/kube-node-sn-hook        
+    - name: 'email-pod-restart'
+      email_configs:
+      - to: 'mymailid@test.com'
+        send_resolved: true
+      webhook_configs:
+      - url: http://automate-service.automate.svc.cluster.local:9000/hooks/kube-pod-restart-hook
+    - name: 'email-pod-scale'
+      email_configs:
+      - to: 'mymailid@test.com'
+        send_resolved: true
+      webhook_configs:
+      - url: http://automate-service.automate.svc.cluster.local:9000/hooks/kube-pod-scale-hook
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-operated
+  labels:
+    app.kubernetes.io/component: alertmanager
+spec:
+  type: "ClusterIP"
+  clusterIP: None
+  selector:
+    k8s-app: alertmanager
+  ports:
+    - name: mesh
+      port: 6783
+      protocol: TCP
+      targetPort: 6783
+    - name: http
+      port: 9093
+      protocol: TCP
+      targetPort: 9093
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  labels:
+    k8s-app: alertmanager
+    app.kubernetes.io/component: alertmanager
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 9093
+      protocol: TCP
+      targetPort: 9093
+      nodePort: 30093
+  selector:
+    k8s-app: alertmanager
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: alertmanager
+  labels: &Labels
+    k8s-app: alertmanager
+    app.kubernetes.io/component: alertmanager
+spec:
+  serviceName: "alertmanager-operated"
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels: *Labels
+  template:
+    metadata:
+      labels: *Labels
+    spec:
+      serviceAccountName: alertmanager
+      containers:
+        - name: prometheus-alertmanager
+          image: quay.io/prometheus/alertmanager:v0.16.0
+          imagePullPolicy: Always
+          args:
+            - --config.file=/etc/config/alertmanager.yml
+            - --storage.path=/data
+            - --web.listen-address=:9093
+            - --web.route-prefix=/
+            - --cluster.listen-address=$(POD_IP):6783
+            - --cluster.peer=alertmanager-0.alertmanager-operated.monitoring.svc:6783
+            - --cluster.peer=alertmanager-1.alertmanager-operated.monitoring.svc:6783
+            - --log.level=debug
+          env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          ports:
+            - containerPort: 9093
+              name: http
+            - containerPort: 6783
+              name: mesh
+          readinessProbe:
+            httpGet:
+              path: /#/status
+              port: 9093
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: alertmanager-data
+              mountPath: "/data"
+              subPath: ""
+          resources:
+            limits:
+              cpu: 10m
+              memory: 50Mi
+            requests:
+              cpu: 10m
+              memory: 50Mi
+      volumes:
+        - name: config-volume
+          configMap:
+            name: alertmanager-config
+        - name: alertmanager-data
+          emptyDir: {}

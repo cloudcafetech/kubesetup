@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+    app.kubernetes.io/part-of: memberlist
+  name: cortex-distributor
+  namespace: monitoring
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: distributor
+      app.kubernetes.io/instance: cortex
+      app.kubernetes.io/name: cortex
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      annotations:
+        prometheus.io/port: http-metrics
+        prometheus.io/scrape: ""
+      labels:
+        app.kubernetes.io/component: distributor
+        app.kubernetes.io/instance: cortex
+        app.kubernetes.io/name: cortex
+        app.kubernetes.io/part-of: memberlist
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: target
+                  operator: In
+                  values:
+                  - distributor
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - args:
+        - -target=distributor
+        - -config.file=/etc/cortex/cortex.yaml
+        image: quay.io/cortexproject/cortex:v1.9.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: cortex
+        ports:
+        - containerPort: 8080
+          name: http-metrics
+          protocol: TCP
+        - containerPort: 7946
+          name: gossip
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/cortex
+          name: config
+        - mountPath: /data
+          name: storage
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: cortex
+      serviceAccountName: cortex
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: config
+        configMap:
+          name: cortex
+      - emptyDir: {}
+        name: storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cortex-distributor
+  namespace: monitoring
+spec:
+  clusterIP: 
+  clusterIPs:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+  name: cortex-distributor-headless
+  namespace: monitoring
+spec:
+  clusterIP: None
+  clusterIPs:
+  - None
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: http-metrics
+  - name: grpc
+    port: 9095
+    protocol: TCP
+    targetPort: grpc
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/component: distributor
+    app.kubernetes.io/instance: cortex
+    app.kubernetes.io/name: cortex
+  sessionAffinity: None
+  type: ClusterIP
