@@ -2,6 +2,7 @@
 # Setup Velero backup script for Kubernetes
 
 # Setup Velero backup
+#MinIO=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 MinIO=10.128.0.9
 velver=v1.4.2
 
@@ -21,7 +22,7 @@ EOF
 
 velero install \
     --provider aws \
-    --bucket velero-cluster1 \
+    --bucket backup \
     --plugins velero/velero-plugin-for-aws:v1.1.0 \
     --use-restic \
     --secret-file ./credentials-velero \
