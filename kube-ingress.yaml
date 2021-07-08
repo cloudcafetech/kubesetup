@@ -1,3 +1,6 @@
+#wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
+#kubectl create ns kube-router
+#kubectl create -f kube-ingress.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
