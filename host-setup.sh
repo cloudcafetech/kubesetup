@@ -42,10 +42,18 @@ EOF
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
 yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk
 
-# Setup for docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
+# Install Docker
+if ! command -v docker &> /dev/null;
+then
+  echo "MISSING REQUIREMENT: docker engine could not be found on your system. Please install docker engine to continue: https://docs.docker.com/get-docker/"
+  echo "Trying to Install Docker..."
+  if [[ $(uname -a | grep amzn) ]]; then
+    echo "Installing Docker for Amazon Linux"
+    amazon-linux-extras install docker -y
+  else
+    curl -s https://releases.rancher.com/install-docker/19.03.sh | sh
+  fi    
+fi
 systemctl start docker; systemctl status docker; systemctl enable docker
 
 cat <<EOF > /etc/sysctl.d/k8s.conf
@@ -105,7 +113,7 @@ kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/kubesetup/maste
 
 # Setup Ingress
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
-sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
+#sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
 kubectl create ns kube-router
 kubectl create -f kube-ingress.yaml
 
