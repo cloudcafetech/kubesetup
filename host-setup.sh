@@ -116,6 +116,7 @@ wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingre
 #sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
 kubectl create ns kube-router
 kubectl create -f kube-ingress.yaml
+kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 
 # Setup Helm Chart
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/helm-setup.sh
