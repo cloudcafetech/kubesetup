@@ -389,17 +389,18 @@ webhooks:
           - networking.k8s.io
         apiVersions:
           - v1
-          #- v1beta1
+          - v1beta1
         operations:
           - CREATE
           - UPDATE
         resources:
           - ingresses
+          - pods      
     failurePolicy: Fail
     sideEffects: None
     admissionReviewVersions:
       - v1
-      #- v1beta1
+      - v1beta1
     clientConfig:
       service:
         namespace: kube-router
