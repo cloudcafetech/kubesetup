@@ -371,7 +371,7 @@ spec:
 ---
 # Before changing this value, check the required kubernetes version
 # To know version of admissionregistration.k8s.io, RUN "kubectl api-versions | grep admissionregistration"
-# https://stackoverflow.com/questions/61616203/nginx-ingress-controller-failed-calling-webhook (search 8)
+# https://stackoverflow.com/questions/61365202/nginx-ingress-service-ingress-nginx-controller-admission-not-found/62044090#62044090
 #apiVersion: admissionregistration.k8s.io/v1beta1
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
