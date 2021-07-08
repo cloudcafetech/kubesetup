@@ -1,6 +1,7 @@
 #wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
 #kubectl create ns kube-router
 #kubectl create -f kube-ingress.yaml
+#kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 apiVersion: v1
 kind: ConfigMap
 metadata:
