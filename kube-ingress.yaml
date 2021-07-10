@@ -254,6 +254,9 @@ spec:
       port: 443
       protocol: TCP
       targetPort: https
+    - name: metrics
+      port: 10254
+      targetPort: metrics      
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
@@ -353,6 +356,8 @@ spec:
             - name: webhook
               containerPort: 8443
               protocol: TCP
+            - name: metrics
+              containerPort: 10254              
           volumeMounts:
             - name: webhook-cert
               mountPath: /usr/local/certificates/
