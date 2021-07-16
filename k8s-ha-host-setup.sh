@@ -2,15 +2,15 @@
 # Kubernetes host setup script for CentOS
 
 master=$1
-HA_PROXY_LB_DNS=172.31.29.217
+HA_PROXY_LB_DNS=172.31.24.185
 HA_PROXY_LB_PORT=6443
 
-MASTER1_HOSTNAME=ip-172-31-26-73.us-east-2.compute.internal
-MASTER2_HOSTNAME=ip-172-31-23-236.us-east-2.compute.internal
-MASTER3_HOSTNAME=ip-172-31-20-131.us-east-2.compute.internal
-MASTER1_IP=172.31.26.73
-MASTER2_IP=172.31.23.236
-MASTER2_IP=172.31.20.131
+MASTER1_HOSTNAME=ip-172-31-27-167.us-east-2.compute.internal
+MASTER2_HOSTNAME=ip-172-31-17-137.us-east-2.compute.internal
+MASTER3_HOSTNAME=ip-172-31-20-149.us-east-2.compute.internal
+MASTER1_IP=172.31.27.167
+MASTER2_IP=172.31.17.137
+MASTER2_IP=172.31.20.149
 
 if [[ ! $master =~ ^( |master1|master2|master3|node|lb)$ ]]; then 
  echo "Usage: host-setup.sh <master1 master2 master3 node or lb>"
@@ -29,30 +29,6 @@ velver=v1.4.2
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 CERTKEY=d60a03f140d7f245c06879ac6ab22aa3408b85a60edb94917d67add3dc2a5fa7
-
-# Stopping and disabling firewalld by running the commands on all servers:
-systemctl stop firewalld
-systemctl disable firewalld
-
-# Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
-swapoff -a
-sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
-
-# Disable SELinux
-setenforce 0
-sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
-
-# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
-cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kubelet kubeadm kubectl
-EOF
 
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
 yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet tc dos2unix java-1.7.0-openjdk
@@ -182,6 +158,30 @@ set -x; cd "$(mktemp -d)" &&
   exit
 fi
 
+# Stopping and disabling firewalld by running the commands on all servers:
+systemctl stop firewalld
+systemctl disable firewalld
+
+# Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
+swapoff -a
+sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
+
+# Disable SELinux
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
 # Change default cgroup driver to systemd 
 cat > /etc/docker/daemon.json <<EOF
 {
@@ -234,7 +234,12 @@ echo "Initialize Master1"
 # Setting up Kubernetes Master#1 using Kubeadm
 if [[ "$master" == "master1" ]]; then
   echo "Initialize Master#1"
-  kubeadm init --control-plane-endpoint "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | tee kubeadm-output.txt
+  kubeadm init --token=$TOKEN --control-plane-endpoint "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | tee kubeadm-output.txt
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  # Deploying Calico Network
+  kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
   exit
 fi
 
