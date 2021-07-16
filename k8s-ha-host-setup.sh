@@ -12,6 +12,12 @@ MASTER1_IP=172.31.26.73
 MASTER2_IP=172.31.23.236
 MASTER2_IP=172.31.20.131
 
+if [[ ! $master =~ ^( |master1|master2|master3|node|lb)$ ]]; then 
+ echo "Usage: host-setup.sh <master1 master2 master3 node or lb>"
+ echo "Example: host-setup.sh master[1-3]/node/lb"
+ exit
+fi
+
 PUB=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 MinIO=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
@@ -23,12 +29,6 @@ velver=v1.4.2
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 CERTKEY=d60a03f140d7f245c06879ac6ab22aa3408b85a60edb94917d67add3dc2a5fa7
-
-if [[ ! $master =~ ^( |master1|master2|master3|node|lb)$ ]]; then 
- echo "Usage: host-setup.sh <master1 master2 master3 node or lb>"
- echo "Example: host-setup.sh master[1-3]/node/lb"
- exit
-fi
 
 # Stopping and disabling firewalld by running the commands on all servers:
 systemctl stop firewalld
