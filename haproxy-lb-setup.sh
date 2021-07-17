@@ -6,7 +6,7 @@ MASTER2_HOSTNAME=ip-172-31-23-236.us-east-2.compute.internal
 MASTER3_HOSTNAME=ip-172-31-20-131.us-east-2.compute.internal
 MASTER1_IP=172.31.26.73
 MASTER2_IP=172.31.23.236
-MASTER2_IP=172.31.20.131
+MASTER3_IP=172.31.20.131
 
 PUB=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 MinIO=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
