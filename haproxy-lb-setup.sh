@@ -97,7 +97,7 @@ systemctl status haproxy
 
 # Verify
 echo "Verify HA Proxy Load Balancer .."
-nc -v localhost 6443
+nc -v -w 1 localhost 6443
 
 # Setup Minio
 mkdir -p /root/minio/data
@@ -132,7 +132,7 @@ echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 
 # Host setup Script Download
 wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/k8s-host-setup.sh
-https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/node-joining-script.sh
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/node-joining-script.sh
 chmod +x ./k8s-host-setup.sh
 chmod +x ./node-joining-script.sh
 
