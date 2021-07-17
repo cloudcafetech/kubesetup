@@ -139,6 +139,10 @@ nc -v localhost 6443
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
   echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 
+# download node Joinging script
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/node-joining-script.sh
+chmod 755 node-joining-script.sh
+
 # Install Krew
 set -x; cd "$(mktemp -d)" &&
   curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
