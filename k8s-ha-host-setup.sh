@@ -2,19 +2,19 @@
 # Kubernetes host setup script for CentOS
 
 master=$1
-HA_PROXY_LB_DNS=172.31.24.185
+HA_PROXY_LB_DNS=172.31.28.205
 HA_PROXY_LB_PORT=6443
 
-MASTER1_HOSTNAME=ip-172-31-27-167.us-east-2.compute.internal
-MASTER2_HOSTNAME=ip-172-31-17-137.us-east-2.compute.internal
-MASTER3_HOSTNAME=ip-172-31-20-149.us-east-2.compute.internal
-MASTER1_IP=172.31.27.167
-MASTER2_IP=172.31.17.137
-MASTER2_IP=172.31.20.149
+MASTER1_HOSTNAME=ip-172-31-26-135.us-east-2.compute.internal
+MASTER2_HOSTNAME=ip-172-31-21-124.us-east-2.compute.internal
+MASTER3_HOSTNAME=ip-172-31-31-51.us-east-2.compute.internal
+MASTER1_IP=172.31.26.135
+MASTER2_IP=172.31.21.124
+MASTER3_IP=172.31.31.51
 
-if [[ ! $master =~ ^( |master1|master2|master3|node|lb)$ ]]; then 
- echo "Usage: host-setup.sh <master1 master2 master3 node or lb>"
- echo "Example: host-setup.sh master[1-3]/node/lb"
+if [[ ! $master =~ ^( |master1|node|lb)$ ]]; then 
+ echo "Usage: host-setup.sh <master1 or lb>"
+ echo "Example: host-setup.sh master1/lb"
  exit
 fi
 
@@ -228,10 +228,10 @@ else
 fi
 
 # Start First Master Host Initialization
-echo "Initialize Master1"
+#echo "Initialize Master1"
 #kubeadm init --control-plane-endpoint "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --upload-certs --pod-network-cidr=192.168.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | tee kubeadm-output.txt
 
-# Setting up Kubernetes Master#1 using Kubeadm
+# Start First Master Host Initialization
 if [[ "$master" == "master1" ]]; then
   echo "Initialize Master#1"
   kubeadm init --token=$TOKEN --control-plane-endpoint "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | tee kubeadm-output.txt
@@ -243,23 +243,8 @@ if [[ "$master" == "master1" ]]; then
   exit
 fi
 
-# Setting up Kubernetes Master#2 using Kubeadm
-if [[ "$master" == "master2" ]]; then
-  echo "Initialize Master#2"
-  kubeadm join "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --discovery-token-unsafe-skip-ca-verification --token=$TOKEN --control-plane --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt
-  exit
-fi
-
-# Setting up Kubernetes Master#3 using Kubeadm
-if [[ "$master" == "master3" ]]; then
-  echo "Initialize Master#3"
-  kubeadm join "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --discovery-token-unsafe-skip-ca-verification --token=$TOKEN --control-plane --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt
-  exit
-fi
-
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
-  echo "Initialize Nodes"
-  kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --discovery-token-unsafe-skip-ca-verification --token=$TOKEN | tee kubeadm-output.txt
+  echo "For Controller and node Run joining script"
   exit
 fi
