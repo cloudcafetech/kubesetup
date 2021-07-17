@@ -48,7 +48,7 @@ exclude=kubelet kubeadm kubectl
 EOF
 
 # Change default cgroup driver to systemd 
-sudo cat > /etc/docker/daemon.json <<EOF
+sudo cat > daemon.json <<EOF
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
   "log-driver": "json-file",
@@ -59,13 +59,15 @@ sudo cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
+sudo cp daemon.json /etc/docker/daemon.json
 sudo systemctl start docker; sudo systemctl status docker; sudo systemctl enable docker
 
-sudo cat <<EOF > /etc/sysctl.d/k8s.conf
+sudo cat <<EOF > k8s.conf
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF
 
+sudo cp k8s.conf /etc/sysctl.d/k8s.conf
 sudo sysctl --system
 sudo systemctl restart docker
 sudo systemctl status docker
