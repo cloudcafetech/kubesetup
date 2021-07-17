@@ -130,6 +130,12 @@ touch $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 
+# Host setup Script Download
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/k8s-host-setup.sh
+https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/node-joining-script.sh
+chmod +x ./k8s-host-setup.sh
+chmod +x ./node-joining-script.sh
+
 # Install Krew
 set -x; cd "$(mktemp -d)" &&
   curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.{tar.gz,yaml}" &&
