@@ -77,7 +77,9 @@ done
 echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 export KUBECONFIG=$HOME/.kube/config
 kubectl get node
-kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/calico.yaml
+kubectl apply -f calico.yaml
+#kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
 #kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 #kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
