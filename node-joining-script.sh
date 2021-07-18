@@ -47,6 +47,7 @@ done
 # Setup for Master 1
 echo "Initialize Masters #1"
 joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --pod-network-cidr=192.168.0.0/16 --upload-certs --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt"
+#joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --upload-certs --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt"
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem $joinMaster1
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem "sudo cp /etc/kubernetes/admin.conf /home/ec2-user/config"
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem "sudo chown ec2-user:ec2-user /home/ec2-user/config"
@@ -76,7 +77,7 @@ done
 echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 export KUBECONFIG=$HOME/.kube/config
 kubectl get node
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
-#kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+#kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 #kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
