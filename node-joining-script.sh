@@ -25,8 +25,8 @@ fi
 # Checking All Deployment Hosts Response
 for rip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
 do
-LBTEST=`nc -w 2 -v $rip 22 </dev/null; echo $?`
-if [[ "$LBTEST" == "0" ]]; then
+HTEST=`nc -w 2 -v $rip 22 </dev/null; echo $?`
+if [[ "$HTEST" == "0" ]]; then
   echo "OK - Host ($rip) on ssh port (22) responding."
 else 
   echo "NOT Good - Host ($rip) on ssh port (22) NOT responding."
