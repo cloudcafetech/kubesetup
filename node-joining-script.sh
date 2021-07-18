@@ -50,7 +50,9 @@ done
 
 # Setup for Master 1
 echo "Initialize Masters #1"
+# For Calico Networking
 joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --pod-network-cidr=192.168.0.0/16 --upload-certs --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt"
+# For Flannel & WeaveNet Networking
 #joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --upload-certs --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt"
 ssh $USER@$MASTER1_IP -o 'StrictHostKeyChecking no' -i $PEMKEY $joinMaster1
 ssh $USER@$MASTER1_IP -o 'StrictHostKeyChecking no' -i $PEMKEY "sudo cp /etc/kubernetes/admin.conf /home/$USER/config"
