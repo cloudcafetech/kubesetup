@@ -26,11 +26,11 @@ fi
 for rip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
 do
 HTEST=`nc -w 2 -v $rip 22 </dev/null; echo $?`
-if [[ "$HTEST" == "0" ]]; then
-  echo "OK - Host ($rip) on ssh port (22) responding."
-else 
+if [[ "$HTEST" == "1" ]]; then
   echo "NOT Good - Host ($rip) on ssh port (22) NOT responding."
   echo "Please Check Host ($rip) on ssh port (22), before proceeding."
+else 
+  echo "OK - Host ($rip) on ssh port (22) responding."
   exit
 fi
 done
