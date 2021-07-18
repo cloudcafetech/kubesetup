@@ -48,3 +48,8 @@ do
 echo "Joining Nodes"
 ssh ec2-user@$nip -o 'StrictHostKeyChecking no' -i key.pem $joinNode
 done
+
+# Setup K8S Networking using Calico
+echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
+export KUBECONFIG=$HOME/.kube/config
+kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
