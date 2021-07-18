@@ -12,6 +12,16 @@ DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 CERTKEY=d60a03f140d7f245c06879ac6ab22aa3408b85a60edb94917d67add3dc2a5fa7
 
+# Checking Load Balancer response
+LBTEST=`nc -w 2 -v $HA_PROXY_LB_DNS $HA_PROXY_LB_PORT </dev/null; echo $?`
+if [[ "$LBTEST" == "0" ]]; then
+  echo "OK - Load Balancer ($HA_PROXY_LB_DNS) on port ($HA_PROXY_LB_PORT) responding."
+else 
+  echo "NOT Good - Load Balancer ($HA_PROXY_LB_DNS) on port ($HA_PROXY_LB_PORT) NOT responding."
+  echo "Please Check Load Balancer ($HA_PROXY_LB_DNS) on port ($HA_PROXY_LB_PORT), before proceeding."
+  exit
+fi
+
 # Host Preparation
 for hip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
 do
