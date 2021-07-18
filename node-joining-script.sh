@@ -32,6 +32,7 @@ mkdir -p $HOME/.kube
 scp -o 'StrictHostKeyChecking no' -i key.pem ec2-user@$MASTER1_IP:/home/ec2-user/config $HOME/.kube/
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
+tokenSHA=$(ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem "sudo openssl x509 -in /etc/kubernetes/pki/ca.crt -noout -pubkey | sudo openssl rsa -pubin -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1")
 joinMaster="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --control-plane --certificate-key=$CERTKEY --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
 joinNode="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
 # Setup for Master 2
