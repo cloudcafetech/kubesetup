@@ -16,7 +16,6 @@ CERTKEY=d60a03f140d7f245c06879ac6ab22aa3408b85a60edb94917d67add3dc2a5fa7
 for hip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
 do
 echo "K8S Host Preparation on $hip"
-#scp ec2-user@$hip -i key.pem ./k8s-host-setup.sh ec2-user@$hip:/home/ec2-user/k8s-host-setup.sh
 ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/k8s-host-setup.sh"
 ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "chmod +x /home/ec2-user/k8s-host-setup.sh"
 ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "/home/ec2-user/k8s-host-setup.sh"
