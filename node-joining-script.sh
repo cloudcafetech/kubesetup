@@ -17,30 +17,29 @@ for hip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
 do
 echo "K8S Host Preparation on $hip"
 #scp ec2-user@$hip -i key.pem ./k8s-host-setup.sh ec2-user@$hip:/home/ec2-user/k8s-host-setup.sh
-ssh ec2-user@$hip -i key.pem "wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/k8s-host-setup.sh"
-ssh ec2-user@$hip -i key.pem "chmod +x /home/ec2-user/k8s-host-setup.sh"
-ssh ec2-user@$hip -i key.pem "/home/ec2-user/k8s-host-setup.sh"
+ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/k8s-host-setup.sh"
+ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "chmod +x /home/ec2-user/k8s-host-setup.sh"
+ssh ec2-user@$hip -o 'StrictHostKeyChecking no' -i key.pem "/home/ec2-user/k8s-host-setup.sh"
 done
-
-joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint "$HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT" --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --kubernetes-version $(kubeadm version -o short) --ignore-preflight-errors=all | tee kubeadm-output.txt"
-joinMaster="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --control-plane --certificate-key=$CERTKEY --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
-joinNode="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
 
 # Setup for Master 1
 echo "Initialize Masters #1"
-ssh ec2-user@$MASTER1_IP -i key.pem $joinMaster1
+joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --ignore-preflight-errors=all | tee kubeadm-output.txt"
+ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem $joinMaster1
 
+joinMaster="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --control-plane --certificate-key=$CERTKEY --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
+joinNode="sudo kubeadm join $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --token=$TOKEN --discovery-token-ca-cert-hash sha256:$tokenSHA --ignore-preflight-errors=all"
 # Setup for Master 2
 echo "Joining Masters #2"
-ssh ec2-user@$MASTER2_IP -i key.pem $joinMaster
+ssh ec2-user@$MASTER2_IP -o 'StrictHostKeyChecking no' -i key.pem $joinMaster
 
 # Setup for Master 3
 echo "Joining Masters #3"
-ssh ec2-user@$MASTER3_IP -i key.pem $joinMaster
+ssh ec2-user@$MASTER3_IP -o 'StrictHostKeyChecking no' -i key.pem $joinMaster
 
 # Node
 for nip in $NODE1
 do
 echo "Joining Nodes"
-ssh ec2-user@$nip -i key.pem $joinNode
+ssh ec2-user@$nip -o 'StrictHostKeyChecking no' -i key.pem $joinNode
 done
