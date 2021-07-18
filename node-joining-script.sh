@@ -46,7 +46,7 @@ done
 
 # Setup for Master 1
 echo "Initialize Masters #1"
-joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --upload-certs --certificate-key=$CERTKEY --pod-network-cidr=192.168.0.0/16 --ignore-preflight-errors=all | tee kubeadm-output.txt"
+joinMaster1="sudo kubeadm init --token=$TOKEN --control-plane-endpoint $HA_PROXY_LB_DNS:$HA_PROXY_LB_PORT --pod-network-cidr=192.168.0.0/16 --upload-certs --certificate-key=$CERTKEY --ignore-preflight-errors=all | tee kubeadm-output.txt"
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem $joinMaster1
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem "sudo cp /etc/kubernetes/admin.conf /home/ec2-user/config"
 ssh ec2-user@$MASTER1_IP -o 'StrictHostKeyChecking no' -i key.pem "sudo chown ec2-user:ec2-user /home/ec2-user/config"
