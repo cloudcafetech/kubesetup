@@ -12,7 +12,7 @@ DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 CERTKEY=d60a03f140d7f245c06879ac6ab22aa3408b85a60edb94917d67add3dc2a5fa7
 
-# Checking Load Balancer response
+# Checking Load Balancer Response
 LBTEST=`nc -w 2 -v $HA_PROXY_LB_DNS $HA_PROXY_LB_PORT </dev/null; echo $?`
 if [[ "$LBTEST" == "0" ]]; then
   echo "OK - Load Balancer ($HA_PROXY_LB_DNS) on port ($HA_PROXY_LB_PORT) responding."
@@ -21,6 +21,19 @@ else
   echo "Please Check Load Balancer ($HA_PROXY_LB_DNS) on port ($HA_PROXY_LB_PORT), before proceeding."
   exit
 fi
+
+# Checking All Deployment Hosts Response
+for rip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
+do
+LBTEST=`nc -w 2 -v $rip 22 </dev/null; echo $?`
+if [[ "$LBTEST" == "0" ]]; then
+  echo "OK - Host ($rip) on ssh port (22) responding."
+else 
+  echo "NOT Good - Host ($rip) on ssh port (22) NOT responding."
+  echo "Please Check Host ($rip) on ssh port (22), before proceeding."
+  exit
+fi
+done
 
 # Host Preparation
 for hip in $MASTER1_IP $MASTER2_IP $MASTER3_IP $NODE1
