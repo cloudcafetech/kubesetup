@@ -62,5 +62,5 @@ done
 # Setup K8S Networking using Calico
 echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bash_profile
 export KUBECONFIG=$HOME/.kube/config
-kubectl get no
+kubectl get node
 kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
