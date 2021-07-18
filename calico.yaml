@@ -1,6 +1,6 @@
 # Note: TCP port 179 need to open
 # Update interface=eth0 below IP_AUTODETECTION_METHOD
-# Eead: https://stackoverflow.com/questions/54465963/calico-node-is-not-ready-bird-is-not-ready-bgp-not-established
+# Read: https://stackoverflow.com/questions/54465963/calico-node-is-not-ready-bird-is-not-ready-bgp-not-established/57943570#57943570
 # Source: calico/templates/calico-config.yaml
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
