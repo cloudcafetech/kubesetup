@@ -5308,7 +5308,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "?? Multiple Kubernetes Cluster Monitoring",
+  "title": "Multiple Kubernetes Cluster Monitoring",
   "uid": "Multi-Kube-Cluster-Mon",
   "version": 1
 }
