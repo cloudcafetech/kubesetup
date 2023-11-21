@@ -108,18 +108,6 @@ systemctl enable --now containerd; systemctl start containerd
 systemctl enable --now kubelet; systemctl start kubelet
 #systemctl status kubelet
 
-# Setting up Kubernetes HA using Kubeadm
-if [[ "$master" == "master" ]]; then
-  echo ""
-  echo "Waiting for Master ($KUBEMASTER) API response .."
-  if [[ $KUBELB != "" ]]; then 
-    KUBEMASTER=$KUBELB
-    while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
-    kubeadm join --discovery-token-unsafe-skip-ca-verification --control-plane --token=$TOKEN $KUBEMASTER:6443
-    exit
-  fi
-fi
-
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
   echo ""
