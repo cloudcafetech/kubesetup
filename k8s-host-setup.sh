@@ -1,85 +1,98 @@
 #!/usr/bin/env bash
-# Kubernetes host setup script for Linux (CentOS,RHEL,Amazon)
+# Kubernetes host setup script using Kubeadm for Debian & Redhat distribution
 
-#K8S_VER=1.14.5
-#K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
+K8S_VER=1.26.0-00
+#K8S_LATEST=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 #curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
+if [[ -n $(uname -a | grep -i ubuntu) ]]; then OS=Ubuntu; fi
 
-# Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
-sudo yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet tc dos2unix java-1.7.0-openjdk
+if [[ "$K8S_VER" == "" ]]; then K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2); fi
+K8S_VER_MJ=$(echo "$K8S_VER" | cut -c 1-4)
 
-# Install Docker
-if ! command -v docker &> /dev/null;
-then
-  echo "MISSING REQUIREMENT: docker engine could not be found on your system. Please install docker engine to continue: https://docs.docker.com/get-docker/"
-  echo "Trying to Install Docker..."
-  if [[ $(uname -a | grep amzn) ]]; then
-    echo "Installing Docker for Amazon Linux"
-    sudo amazon-linux-extras install docker -y
-  else
-    sudo curl -s https://releases.rancher.com/install-docker/19.03.sh | sh
-  fi    
-fi
+# Disable swap
+swapoff -a
+sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
 
-sudo systemctl start docker; sudo systemctl status docker; sudo systemctl enable docker
-
-# Stopping and disabling firewalld by running the commands on all servers:
-sudo systemctl stop firewalld
-sudo systemctl disable firewalld
-
-# Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
-sudo swapoff -a
-sudo sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
-
-# Disable SELinux
-sudo setenforce 0
-sudo sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
-
-# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
-sudo cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kubelet kubeadm kubectl
-EOF
-
-# Change default cgroup driver to systemd 
-sudo cat > daemon.json <<EOF
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
-
-sudo cp daemon.json /etc/docker/daemon.json
-sudo systemctl start docker; sudo systemctl status docker; sudo systemctl enable docker
-
-sudo cat <<EOF > k8s.conf
+cat <<EOF |sudo tee /etc/sysctl.d/kubernetes.conf
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
 EOF
 
-sudo cp k8s.conf /etc/sysctl.d/k8s.conf
-sudo sysctl --system
-sudo systemctl restart docker
-sudo systemctl status docker
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf 
+overlay
+br_netfilter
+EOF
 
-# Installation with specefic version
-#yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
-if [[ "$K8S_VER" == "" ]]; then
- sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+modprobe overlay
+modprobe br_netfilter
+
+sysctl --system
+
+## Installation based on OS
+
+### For Debian distribution
+if [[ "$OS" == "Ubuntu" ]]; then
+ # Stopping and disabling firewalld by running the commands on all servers:
+ systemctl stop ufw
+ systemctl disable ufw
+ # Install some of the tools, we’ll need on our servers.
+ apt update
+ apt install apt-transport-https ca-certificates gpg nfs-common curl wget git net-tools unzip jq zip nmap telnet dos2unix apparmor -y
+ mkdir -m 755 /etc/apt/keyrings
+ curl -fsSL https://pkgs.k8s.io/core:/stable:/v${K8S_VER_MJ}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+ echo deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$K8S_VER_MJ/deb/ / | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+ # Install Container Runtime, Kubeadm, Kubelet & Kubectl
+ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+ add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y
+ apt update
+ apt install -y containerd.io
+ apt install -y kubelet kubeadm kubectl
+ apt-mark hold kubelet kubeadm kubectl
+
+### For Redhat distribution
+
 else
- sudo yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
+ # Stopping and disabling firewalld & SELinux
+ systemctl stop firewalld
+ systemctl disable firewalld
+ setenforce 0
+ sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+ # Install some of the tools, we’ll need on our servers.
+ yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk
+
+# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v$K8S_VER_MJ/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v$K8S_VER_MJ/rpm/repodata/repomd.xml.key
+exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+EOF
+
+ # Install Container Runtime, Kubeadm, Kubelet & Kubectl
+ yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+ yum install -y yum-utils containerd.io && rm -I /etc/containerd/config.toml
+ yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 fi
 
-# After installing container runtime and our kubernetes tools
-# we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
-sudo systemctl enable --now kubelet; sudo systemctl start kubelet; sudo systemctl status kubelet
+## Installation based on OS 
+
+mkdir -p /etc/containerd
+containerd config default > /etc/containerd/config.toml 
+sed -i -e 's\            SystemdCgroup = false\            SystemdCgroup = true\g' /etc/containerd/config.toml
+
+cat <<EOF | tee /etc/crictl.yaml
+runtime-endpoint: "unix:///run/containerd/containerd.sock"
+timeout: 0
+debug: false
+EOF
+
+# After installing containerd, kubernetes tools  & enable the services so that they persist post reboots.
+systemctl enable --now containerd; systemctl start containerd
+#systemctl status containerd
+systemctl enable --now kubelet; systemctl start kubelet
+#systemctl status kubelet
