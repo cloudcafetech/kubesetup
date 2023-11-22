@@ -85,7 +85,7 @@ exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 EOF
 
  # Install Container Runtime, Kubeadm, Kubelet & Kubectl
- yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+ yum config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
  yum install -y yum-utils containerd.io && rm -I /etc/containerd/config.toml
  yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 fi
