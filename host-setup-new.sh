@@ -58,6 +58,7 @@ if [[ "$OS" == "Ubuntu" ]]; then
  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y
  apt update
+ rm -I /etc/containerd/config.toml 
  apt install -y containerd.io
  apt install -y kubelet kubeadm kubectl
  apt-mark hold kubelet kubeadm kubectl
