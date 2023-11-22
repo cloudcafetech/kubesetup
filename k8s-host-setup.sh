@@ -47,6 +47,7 @@ if [[ "$OS" == "Ubuntu" ]]; then
  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y
  apt update
+ rm -I /etc/containerd/config.toml 
  apt install -y containerd.io
  apt install -y kubelet kubeadm kubectl
  apt-mark hold kubelet kubeadm kubectl
@@ -74,7 +75,7 @@ exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 EOF
 
  # Install Container Runtime, Kubeadm, Kubelet & Kubectl
- yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+ yum config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
  yum install -y yum-utils containerd.io && rm -I /etc/containerd/config.toml
  yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 fi
