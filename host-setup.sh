@@ -9,7 +9,6 @@ K8S_VER=1.26.0-00
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 if [[ -n $(uname -a | grep -i ubuntu) ]]; then OS=Ubuntu; fi
-KUBELB=
 
 if [[ ! $master =~ ^( |master|node)$ ]]; then 
  echo "Usage: host-setup.sh <master or node>"
@@ -109,11 +108,13 @@ systemctl enable --now containerd; systemctl start containerd
 systemctl enable --now kubelet; systemctl start kubelet
 #systemctl status kubelet
 
+# K8s images pull
+kubeadm config images pull
+
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
   echo ""
   echo "Waiting for Master ($KUBEMASTER) API response .."
-  if [[ $KUBELB != "" ]]; then KUBEMASTER=$KUBELB; fi
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
   exit
@@ -138,11 +139,9 @@ sleep 20
 kubectl get nodes
 
 # Make Master scheduble
-if [[ $KUBELB == "" ]]; then 
- MASTER=`kubectl get nodes | grep control-plane | awk '{print $1}'`
- kubectl taint nodes $MASTER node-role.kubernetes.io/control-plane-
- kubectl get nodes -o json | jq .items[].spec.taints
-fi
+MASTER=`kubectl get nodes | grep control-plane | awk '{print $1}'`
+kubectl taint nodes $MASTER node-role.kubernetes.io/control-plane-
+kubectl get nodes -o json | jq .items[].spec.taints
 
 # Setup Metric Server
 kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/monitoring/metric-server.yaml
