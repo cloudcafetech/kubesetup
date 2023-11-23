@@ -97,3 +97,6 @@ systemctl enable --now containerd; systemctl start containerd
 #systemctl status containerd
 systemctl enable --now kubelet; systemctl start kubelet
 #systemctl status kubelet
+
+# K8s images pull
+kubeadm config images pull
