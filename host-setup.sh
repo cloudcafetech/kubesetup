@@ -8,7 +8,7 @@ K8S_VER=1.26.0-00
 #curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
-if [[ -n $(uname -a | grep -i ubuntu) ]]; then OS=Ubuntu; fi
+if [[ -n $(uname -a | -iE 'ubuntu|debian') ]]; then OS=Ubuntu; fi
 
 if [[ ! $master =~ ^( |master|node)$ ]]; then 
  echo "Usage: host-setup.sh <master or node>"
