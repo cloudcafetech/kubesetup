@@ -4,7 +4,7 @@
 K8S_VER=1.26.0-00
 #K8S_LATEST=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 #curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
-if [[ -n $(uname -a | grep -i ubuntu) ]]; then OS=Ubuntu; fi
+if [[ -n $(uname -a | -iE 'ubuntu|debian') ]]; then OS=Ubuntu; fi
 
 if [[ "$K8S_VER" == "" ]]; then K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2); fi
 K8S_VER_MJ=$(echo "$K8S_VER" | cut -c 1-4)
