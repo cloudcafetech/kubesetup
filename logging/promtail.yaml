@@ -58,6 +58,9 @@ data:
           - labels:
                 level: ""
         relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            regex: default|kube-system
+            action: drop          
           - source_labels:
               - __meta_kubernetes_pod_label_name
             target_label: __service__
@@ -109,6 +112,9 @@ data:
           - labels:
                 level: ""
         relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            regex: default|kube-system
+            action: drop          
           - action: drop
             regex: .+
             source_labels:
@@ -164,6 +170,9 @@ data:
           - labels:
                 level: ""
         relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            regex: default|kube-system
+            action: drop          
           - action: drop
             regex: .+
             separator: ""
@@ -225,6 +234,9 @@ data:
           - labels:
                 level: ""
         relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            regex: default|kube-system
+            action: drop          
           - action: drop
             regex: .+
             separator: ""
@@ -288,6 +300,9 @@ data:
           - labels:
                 level: ""
         relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            regex: default|kube-system
+            action: drop          
           - action: drop
             regex: ""
             source_labels:
