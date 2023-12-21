@@ -42,7 +42,7 @@ data:
   promtail.yml: |
     clients:
       - external_labels: {}
-        url: http://:@loki.logging.svc.cluster.local:3100/loki/api/v1/push
+        url: http://loki:3100/loki/api/v1/push
     scrape_configs:
       - job_name: kubernetes-pods-name
         kubernetes_sd_configs:
@@ -371,7 +371,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        image: grafana/promtail:1.5.0
+        #image: grafana/promtail:1.5.0
+        image: grafana/promtail:2.8.3      
         imagePullPolicy: IfNotPresent
         name: promtail
         ports:
