@@ -193,7 +193,7 @@ spec:
       containers:
       - args:
         - -config.file=/etc/loki/loki.yaml
-        image: grafana/loki:2.0.0-amd64
+        image: docker.io/grafana/loki:2.0.0-amd64
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -312,7 +312,7 @@ spec:
     spec:
       containers:
       #- image: grafana/fluent-bit-plugin-loki:0.1
-      - image: grafana/fluent-bit-plugin-loki:latest
+      - image: docker.io/grafana/fluent-bit-plugin-loki:latest
         imagePullPolicy: IfNotPresent
         name: fluent-bit-loki
         env:
