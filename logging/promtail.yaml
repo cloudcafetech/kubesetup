@@ -372,7 +372,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
         #image: grafana/promtail:1.5.0
-        image: grafana/promtail:2.8.3      
+        image: docker.io/grafana/promtail:2.8.3      
         imagePullPolicy: IfNotPresent
         name: promtail
         ports:
