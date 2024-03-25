@@ -345,6 +345,14 @@ data:
               - __meta_kubernetes_pod_annotation_kubernetes_io_config_mirror
               - __meta_kubernetes_pod_container_name
             target_label: __path__
+      - job_name: audit-logs
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: audit-logs
+              host: ${HOSTNAME}
+              __path__: /var/log/kubernetes/**/*.log            
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -365,6 +373,7 @@ spec:
       containers:
       - args:
         - -config.file=/etc/promtail/promtail.yml
+        - -config.expand-env=true        
         env:
         - name: HOSTNAME
           valueFrom:
