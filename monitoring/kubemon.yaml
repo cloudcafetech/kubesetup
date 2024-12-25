@@ -125,7 +125,8 @@ spec:
       containers:
         - name: prometheus-alertmanager
           # The Alertmanager container image
-          image: quay.io/prometheus/alertmanager:v0.16.0
+          image: quay.io/prometheus/alertmanager:v0.27.0
+          #image: quay.io/prometheus/alertmanager:v0.16.0          
           imagePullPolicy: Always
           args:
             - --config.file=/etc/config/alertmanager.yml
