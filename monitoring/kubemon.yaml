@@ -704,6 +704,32 @@ data:
   # If you'd like to add your own alerts or modify existing alerts, you can edit this ConfigMap value.
   alerts.yaml: |-
     "groups": 
+    - name: minio-alerts 
+      rules:
+      - alert: NodesOffline
+        expr: avg_over_time(minio_cluster_nodes_offline_total{job="minio-cluster"}[5m]) > 0
+        for: 10m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Node down in MinIO deployment"
+          description: "Node(s) in cluster {{ $labels.instance }} offline for more than 5 minutes"
+      - alert: DisksOffline
+        expr: avg_over_time(minio_cluster_drive_offline_total{job="minio-cluster"}[5m]) > 0
+        for: 10m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Disks down in MinIO deployment"
+          description: "Disks(s) in cluster {{ $labels.instance }} offline for more than 5 minutes"
+      - alert: QuotaExceed
+        expr: avg by(bucket) ((minio_bucket_usage_total_bytes * 100) / minio_bucket_quota_total_bytes) > 90
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Quota Exceed for Bucket"
+          description: "Bucket(s) Quota Exceed in cluster {{ $labels.bucket }}"      
     - name: cost-rules
       rules:
       - alert: MonthlyAllNodesCost
@@ -1165,6 +1191,24 @@ data:
           "severity": "critical"
   rules.yaml: |-
     "groups": 
+    - name: ForOpenshiftConsole
+      rules:
+      - expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)
+        record: instance:node_cpu:rate:sum
+      - expr: sum(rate(container_cpu_usage_seconds_total{job="cadvisor",container!="",container!="POD"}[2m])) by (namespace,pod)
+        record: pod:container_cpu_usage:sum
+      - expr: sum(container_network_receive_bytes_total{}) by(instance,namespace,pod,interface)
+        record: instance:node_network_receive_bytes:rate:sum
+      - expr: sum(container_network_transmit_bytes_total{}) by(instance,namespace,pod,interface)
+        record: instance:node_network_transmit_bytes:rate:sum
+      - expr: sum(kube_pod_container_resource_requests{container!=""}) by (node,namespace,pod,resource)
+        record: kube_pod_resource_request
+      - expr: sum(kube_pod_container_resource_limits{container!=""}) by (node,namespace,pod,resource)
+        record: kube_pod_resource_limit
+      - expr: sum(container_network_receive_bytes_total{}) by(namespace,pod,interface) * 0
+        record: pod_network_name_info
+      - expr: sum(container_fs_usage_bytes{}) by (namespace, pod)
+        record: pod:container_fs_usage_bytes:sum      
     - "name": "k8s.rules"
       "rules": 
       - "expr": |
